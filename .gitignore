@@ -1,0 +1,29 @@
+# ---- 秘密情報（絶対に公開しない）
+appsettings.Local.json
+*.local.json
+secrets.json
+*.pfx
+.env
+
+# ---- 元の試作（接続の鍵がコードに書かれているため公開しない）
+_prototype/
+
+# ---- 測定データ（患者の情報を含む可能性がある）
+*.db
+*.db-shm
+*.db-wal
+*.dcm
+*.csv
+!tests/**/fixtures/*.csv
+exports/
+
+# ---- Visual Studio / .NET
+.vs/
+.idea/
+bin/
+obj/
+*.user
+*.suo
+[Pp]ublish/
+Releases/
+TestResults/
