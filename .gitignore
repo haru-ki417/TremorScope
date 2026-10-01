@@ -27,3 +27,6 @@ obj/
 [Pp]ublish/
 Releases/
 TestResults/
+
+# ファームウェアの Wi-Fi・デバイス鍵
+firmware/**/secrets.h
