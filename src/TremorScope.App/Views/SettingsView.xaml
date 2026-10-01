@@ -1,0 +1,228 @@
+<UserControl x:Class="TremorScope.App.Views.SettingsView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <Style x:Key="Section" TargetType="Border" BasedOn="{StaticResource Card}">
+            <Setter Property="Margin" Value="0,0,0,18" />
+        </Style>
+        <Style x:Key="Field" TargetType="StackPanel">
+            <Setter Property="Margin" Value="0,0,0,14" />
+        </Style>
+        <Style x:Key="Check" TargetType="TextBlock" BasedOn="{StaticResource Muted}">
+            <Setter Property="Margin" Value="0,8,0,0" />
+            <Setter Property="Foreground" Value="{StaticResource InkBrush}" />
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <StackPanel Margin="36,32,36,20" MaxWidth="880" HorizontalAlignment="Left">
+                <TextBlock Text="SETTINGS" Style="{StaticResource Eyebrow}" />
+                <TextBlock Text="設定" Style="{StaticResource PageTitle}" Margin="0,0,0,22" />
+
+                <!-- 施設と測定 -->
+                <Border Style="{StaticResource Section}">
+                    <StackPanel>
+                        <TextBlock Text="施設と測定" Style="{StaticResource SectionTitle}" />
+                        <StackPanel Style="{StaticResource Field}">
+                            <TextBlock Text="施設名（レポートに印字）" Style="{StaticResource FieldLabel}" />
+                            <TextBox Text="{Binding FacilityName, UpdateSourceTrigger=PropertyChanged}" MaxLength="80" />
+                        </StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="20" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="1 条件の測定時間（秒）" Style="{StaticResource FieldLabel}" />
+                                <ComboBox ItemsSource="{Binding DurationChoices}" SelectedItem="{Binding MeasurementSeconds}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="「目立つふるえ」とみなす大きさ（mg, RMS）" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding TremorThresholdMg, UpdateSourceTrigger=LostFocus}" FontFamily="{StaticResource NumberFont}" />
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Style="{StaticResource Muted}" Margin="0,10,0,0"
+                                   Text="比較の文章（安静時と姿勢時のどちらが大きいか）で使う基準です。新しく保存する測定から反映されます。" />
+                    </StackPanel>
+                </Border>
+
+                <!-- センサー -->
+                <Border Style="{StaticResource Section}">
+                    <StackPanel>
+                        <TextBlock Text="センサー" Style="{StaticResource SectionTitle}" />
+                        <StackPanel Style="{StaticResource Field}">
+                            <TextBlock Text="つなぎ方" Style="{StaticResource FieldLabel}" />
+                            <ComboBox ItemsSource="{Binding SensorModes}" SelectedValuePath="Value" DisplayMemberPath="Label" SelectedValue="{Binding SensorMode}" />
+                        </StackPanel>
+
+                        <StackPanel Style="{StaticResource Field}" Visibility="{Binding IsIotHub, Converter={StaticResource Visible}, ConverterParameter=Invert}">
+                            <TextBlock Text="模擬センサーの信号" Style="{StaticResource FieldLabel}" />
+                            <ComboBox ItemsSource="{Binding Profiles}" SelectedValuePath="Value" DisplayMemberPath="Label" SelectedValue="{Binding SimulatorProfile}" />
+                            <TextBlock Style="{StaticResource Muted}" Margin="0,8,0,0"
+                                       Text="センサーが無くても、操作の練習やデモができます。模擬の測定も保存されるので、練習用の患者（例: DEMO-001）で使ってください。" />
+                        </StackPanel>
+
+                        <StackPanel Visibility="{Binding IsIotHub, Converter={StaticResource Visible}}">
+                            <StackPanel Style="{StaticResource Field}">
+                                <TextBlock Text="IoT Hub の接続文字列（組み込みのエンドポイント・イベント ハブ互換）" Style="{StaticResource FieldLabel}" />
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Content="形式を確認" Command="{Binding CheckIotCommand}" Margin="8,0,0,0" />
+                                    <PasswordBox x:Name="IotBox" PasswordChanged="OnIotChanged" />
+                                </DockPanel>
+                                <TextBlock Style="{StaticResource Muted}" Margin="0,6,0,0" Text="保存済みです。変更するときだけ入力してください。"
+                                           Visibility="{Binding HasIotSecret, Converter={StaticResource Visible}}" />
+                                <TextBlock Text="{Binding IotCheck}" Style="{StaticResource Check}" Visibility="{Binding IotCheck, Converter={StaticResource Visible}}" />
+                            </StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="20" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="デバイス ID（空欄ならすべて）" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding IotDeviceId, UpdateSourceTrigger=PropertyChanged}" FontFamily="{StaticResource NumberFont}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Style="{StaticResource Field}">
+                                    <TextBlock Text="コンシューマー グループ" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding IotConsumerGroup, UpdateSourceTrigger=PropertyChanged}" FontFamily="{StaticResource NumberFont}" />
+                                </StackPanel>
+                            </Grid>
+                            <Border Style="{StaticResource Well}">
+                                <TextBlock Style="{StaticResource Muted}"
+                                           Text="受信だけに使うので、Azure Portal の「共有アクセス ポリシー」で「service」（サービス接続のみ）の接続文字列を使ってください。すべての権限を持つ「iothubowner」は使わないことをおすすめします。" />
+                            </Border>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- クラウド -->
+                <Border Style="{StaticResource Section}">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,10">
+                            <CheckBox DockPanel.Dock="Right" Content="クラウドに保存する" IsChecked="{Binding CloudEnabled}" />
+                            <TextBlock Text="クラウド（Azure Cosmos DB）" Style="{StaticResource SectionTitle}" Margin="0" />
+                        </DockPanel>
+                        <TextBlock Style="{StaticResource Muted}" Margin="0,0,0,14"
+                                   Text="送るのは仮名 ID・測定日時・左右・解析結果・波形だけです。カルテ番号とメモは送りません。送れなかった測定は、あとで自動的に送り直します。" />
+                        <StackPanel IsEnabled="{Binding CloudEnabled}">
+                            <StackPanel Style="{StaticResource Field}">
+                                <TextBlock Text="エンドポイント（https://….documents.azure.com:443/）" Style="{StaticResource FieldLabel}" />
+                                <TextBox Text="{Binding CosmosEndpoint, UpdateSourceTrigger=PropertyChanged}" FontFamily="{StaticResource NumberFont}" />
+                            </StackPanel>
+                            <StackPanel Style="{StaticResource Field}">
+                                <TextBlock Text="キー" Style="{StaticResource FieldLabel}" />
+                                <PasswordBox x:Name="CosmosBox" PasswordChanged="OnCosmosChanged" />
+                                <TextBlock Style="{StaticResource Muted}" Margin="0,6,0,0" Text="保存済みです。変更するときだけ入力してください。"
+                                           Visibility="{Binding HasCosmosKey, Converter={StaticResource Visible}}" />
+                            </StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="20" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="データベース" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding CosmosDatabase, UpdateSourceTrigger=PropertyChanged}" FontFamily="{StaticResource NumberFont}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Style="{StaticResource Field}">
+                                    <TextBlock Text="コンテナー" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding CosmosContainer, UpdateSourceTrigger=PropertyChanged}" FontFamily="{StaticResource NumberFont}" />
+                                </StackPanel>
+                            </Grid>
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="接続を確認" Command="{Binding TestCloudCommand}" Margin="0,0,8,0" />
+                                <Button Content="未送信の測定を今すぐ送る" Command="{Binding SyncNowCommand}" Style="{StaticResource GhostButton}" />
+                            </StackPanel>
+                            <TextBlock Text="{Binding CloudCheck}" Style="{StaticResource Check}" Visibility="{Binding CloudCheck, Converter={StaticResource Visible}}" />
+                            <TextBlock Text="{Binding Cloud.Status}" Style="{StaticResource Muted}" Margin="0,6,0,0" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- PACS -->
+                <Border Style="{StaticResource Section}">
+                    <StackPanel>
+                        <DockPanel Margin="0,0,0,10">
+                            <CheckBox DockPanel.Dock="Right" Content="PACS に送信する" IsChecked="{Binding PacsEnabled}" />
+                            <TextBlock Text="PACS（DICOM）" Style="{StaticResource SectionTitle}" Margin="0" />
+                        </DockPanel>
+                        <TextBlock Style="{StaticResource Muted}" Margin="0,0,0,14"
+                                   Text="結果画面の「PACS へ送信」で、レポートを DICOM 画像（Secondary Capture）にして送ります。" />
+                        <StackPanel IsEnabled="{Binding PacsEnabled}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="2*" />
+                                    <ColumnDefinition Width="20" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="ホスト（名前または IP アドレス）" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding PacsHost, UpdateSourceTrigger=PropertyChanged}" FontFamily="{StaticResource NumberFont}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Style="{StaticResource Field}">
+                                    <TextBlock Text="ポート" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding PacsPort, UpdateSourceTrigger=LostFocus}" FontFamily="{StaticResource NumberFont}" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="20" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <StackPanel Style="{StaticResource Field}">
+                                    <TextBlock Text="このアプリの AE タイトル" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding PacsCallingAeTitle, UpdateSourceTrigger=PropertyChanged}" FontFamily="{StaticResource NumberFont}" MaxLength="16" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Style="{StaticResource Field}">
+                                    <TextBlock Text="PACS の AE タイトル" Style="{StaticResource FieldLabel}" />
+                                    <TextBox Text="{Binding PacsCalledAeTitle, UpdateSourceTrigger=PropertyChanged}" FontFamily="{StaticResource NumberFont}" MaxLength="16" />
+                                </StackPanel>
+                            </Grid>
+                            <StackPanel Style="{StaticResource Field}">
+                                <TextBlock Text="DICOM の患者 ID に入れる値" Style="{StaticResource FieldLabel}" />
+                                <ComboBox ItemsSource="{Binding PacsIdModes}" SelectedValuePath="Value" DisplayMemberPath="Label" SelectedValue="{Binding PacsIdMode}" />
+                            </StackPanel>
+                            <Button Content="接続を確認（C-ECHO）" Command="{Binding TestPacsCommand}" HorizontalAlignment="Left" />
+                            <TextBlock Text="{Binding PacsCheck}" Style="{StaticResource Check}" Visibility="{Binding PacsCheck, Converter={StaticResource Visible}}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- データ -->
+                <Border Style="{StaticResource Section}">
+                    <StackPanel>
+                        <TextBlock Text="この PC のデータ" Style="{StaticResource SectionTitle}" />
+                        <TextBlock Style="{StaticResource Muted}" Text="患者・測定・設定は次のフォルダーに保存しています。接続文字列やキーは Windows の機能（DPAPI）で暗号化しています。" />
+                        <DockPanel Margin="0,10,0,0">
+                            <Button DockPanel.Dock="Right" Content="フォルダーを開く" Command="{Binding OpenDataFolderCommand}" Style="{StaticResource GhostButton}" />
+                            <TextBlock Text="{Binding DataDirectory}" FontFamily="{StaticResource NumberFont}" FontSize="13" Foreground="{StaticResource Ink2Brush}"
+                                       VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        </DockPanel>
+                        <Border Style="{StaticResource Well}" Margin="0,12,0,0">
+                            <TextBlock Style="{StaticResource Muted}"
+                                       Text="フォルダー内の secrets.bin（施設の鍵）を失うと、同じカルテ番号から同じ仮名 ID を作れなくなります。PC を入れ替えるときは、設定をやり直す前に管理者に相談してください。" />
+                        </Border>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- 保存 -->
+        <Border Grid.Row="1" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" Padding="36,14">
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="保存" Style="{StaticResource PrimaryButton}" Command="{Binding SaveCommand}" MinWidth="140" />
+                <TextBlock Text="{Binding Message}" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="0,0,16,0" />
+            </DockPanel>
+        </Border>
+    </Grid>
+</UserControl>

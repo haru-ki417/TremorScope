@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>TremorScope.App</RootNamespace>
+    <AssemblyName>TremorScope</AssemblyName>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\TremorScope.ico</ApplicationIcon>
+    <!-- 画面の生成コード（XAML）由来の警告は対象外にする -->
+    <NoWarn>$(NoWarn);CA1001;CA1515;NU1701;CA1822</NoWarn>
+    <!-- CA1822: 画面とのひも付け（Binding）に使うプロパティは、インスタンスのままにする -->
+    <!-- SkiaSharp.Views.WPF（ScottPlot が使う）は .NET Framework 向けの表記だが、.NET でもそのまま動く -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+    <PackageReference Include="ScottPlot.WPF" Version="5.1.59" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="10.0.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Assets\TremorScope.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TremorScope.Core\TremorScope.Core.csproj" />
+    <ProjectReference Include="..\TremorScope.Infrastructure\TremorScope.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+  </ItemGroup>
+
+</Project>

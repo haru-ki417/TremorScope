@@ -1,0 +1,110 @@
+<Window x:Class="TremorScope.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:TremorScope.App.ViewModels"
+        xmlns:v="clr-namespace:TremorScope.App.Views"
+        Title="TremorScope — 振戦測定補助" Width="1360" Height="860" MinWidth="1100" MinHeight="720"
+        WindowStartupLocation="CenterScreen" Background="{StaticResource PaperBrush}"
+        FontFamily="{StaticResource UiFont}" TextOptions.TextFormattingMode="Ideal" UseLayoutRounding="True">
+    <Window.Resources>
+        <DataTemplate DataType="{x:Type vm:PatientsViewModel}"><v:PatientsView /></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:MeasureViewModel}"><v:MeasureView /></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:ResultViewModel}"><v:ResultView /></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:HistoryViewModel}"><v:HistoryView /></DataTemplate>
+        <DataTemplate DataType="{x:Type vm:SettingsViewModel}"><v:SettingsView /></DataTemplate>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="236" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <!-- 左: ナビゲーション -->
+        <Border Background="{StaticResource RailBrush}">
+            <DockPanel LastChildFill="False">
+                <!-- ロゴ -->
+                <StackPanel DockPanel.Dock="Top" Margin="24,26,20,22">
+                    <StackPanel Orientation="Horizontal">
+                        <Border Width="34" Height="34" CornerRadius="9" Background="#1B2B3A">
+                            <Path Data="M3,17 L8,17 L10,10 L13,24 L16,6 L19,26 L22,12 L24,17 L31,17" Stroke="{StaticResource RestBrush}" StrokeThickness="2.2"
+                                  StrokeLineJoin="Round" StrokeStartLineCap="Round" StrokeEndLineCap="Round" />
+                        </Border>
+                        <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="TremorScope" FontFamily="{StaticResource NumberFont}" FontSize="19" FontWeight="SemiBold" Foreground="White" />
+                            <TextBlock Text="振戦 測定補助" FontSize="11" Foreground="{StaticResource RailInkBrush}" Margin="0,1,0,0" />
+                        </StackPanel>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- 選択中の患者 -->
+                <Border DockPanel.Dock="Top" Margin="14,0,14,18" Padding="14,12" CornerRadius="9" Background="#18222F" BorderBrush="#243244" BorderThickness="1">
+                    <Grid>
+                        <StackPanel Visibility="{Binding HasPatient, Converter={StaticResource Visible}}">
+                            <TextBlock Text="選択中の患者" FontSize="11" Foreground="{StaticResource RailInkBrush}" />
+                            <TextBlock Text="{Binding CurrentPatient.LocalId}" FontFamily="{StaticResource NumberFont}" FontSize="20" FontWeight="SemiBold"
+                                       Foreground="White" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
+                            <TextBlock FontFamily="{StaticResource NumberFont}" FontSize="11.5" Foreground="#7F8A99" Margin="0,2,0,0">
+                                <Run Text="仮名 " /><Run Text="{Binding CurrentPatient.PseudonymId, Mode=OneWay}" />
+                            </TextBlock>
+                        </StackPanel>
+                        <TextBlock Text="患者を選ぶと、測定と履歴を開けます" FontSize="12" Foreground="{StaticResource RailInkBrush}" TextWrapping="Wrap"
+                                   Visibility="{Binding HasPatient, Converter={StaticResource Visible}, ConverterParameter=Invert}" />
+                    </Grid>
+                </Border>
+
+                <Button DockPanel.Dock="Top" Style="{StaticResource NavButton}" Command="{Binding ShowPatientsCommand}" Tag="{Binding IsPatients}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE716;" FontFamily="{StaticResource IconFont}" FontSize="16" Width="28" VerticalAlignment="Center" />
+                        <TextBlock Text="患者" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button DockPanel.Dock="Top" Style="{StaticResource NavButton}" Command="{Binding ShowMeasureCommand}" Tag="{Binding IsMeasure}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE9D9;" FontFamily="{StaticResource IconFont}" FontSize="16" Width="28" VerticalAlignment="Center" />
+                        <TextBlock Text="測定" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button DockPanel.Dock="Top" Style="{StaticResource NavButton}" Command="{Binding ShowHistoryCommand}" Tag="{Binding IsHistory}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE81C;" FontFamily="{StaticResource IconFont}" FontSize="16" Width="28" VerticalAlignment="Center" />
+                        <TextBlock Text="履歴と経過" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+                <Button DockPanel.Dock="Top" Style="{StaticResource NavButton}" Command="{Binding ShowSettingsCommand}" Tag="{Binding IsSettings}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="&#xE713;" FontFamily="{StaticResource IconFont}" FontSize="16" Width="28" VerticalAlignment="Center" />
+                        <TextBlock Text="設定" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+
+                <!-- 下: 状態 -->
+                <StackPanel DockPanel.Dock="Bottom" Margin="24,0,20,22">
+                    <TextBlock Text="センサー" FontSize="11" Foreground="#6C7787" />
+                    <TextBlock Text="{Binding SensorDescription}" FontSize="12.5" Foreground="{StaticResource RailInkBrush}" Margin="0,2,0,10" TextWrapping="Wrap" />
+                    <StackPanel Orientation="Horizontal">
+                        <Ellipse Width="7" Height="7" VerticalAlignment="Center" Margin="0,0,7,0">
+                            <Ellipse.Style>
+                                <Style TargetType="Ellipse">
+                                    <Setter Property="Fill" Value="{StaticResource RestBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Cloud.HasProblem}" Value="True">
+                                            <Setter Property="Fill" Value="#E0A030" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Ellipse.Style>
+                        </Ellipse>
+                        <TextBlock Text="{Binding Cloud.Status}" FontSize="12" Foreground="{StaticResource RailInkBrush}" TextWrapping="Wrap" MaxWidth="170" />
+                    </StackPanel>
+                    <TextBlock FontSize="11" Foreground="#56606F" Margin="0,14,0,0" TextWrapping="Wrap">
+                        <Run Text="v" /><Run Text="{Binding AppVersion, Mode=OneWay}" /><Run Text=" · 医療機器ではありません" />
+                    </TextBlock>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <!-- 右: 各画面 -->
+        <ContentControl Grid.Column="1" Content="{Binding CurrentPage}" Focusable="False" />
+    </Grid>
+</Window>
