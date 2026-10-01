@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/TremorScope.Core/TremorScope.Core.csproj" />
+    <Project Path="src/TremorScope.Infrastructure/TremorScope.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/TremorScope.Tests/TremorScope.Tests.csproj" />

@@ -16,6 +16,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\TremorScope.Core\TremorScope.Core.csproj" />
+    <ProjectReference Include="..\..\src\TremorScope.Infrastructure\TremorScope.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>
