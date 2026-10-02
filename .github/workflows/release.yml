@@ -1,10 +1,10 @@
-# v1.2.3 のようなタグを付けると、Windows 用の配布物（.NET の入っていない PC でも動く zip）を作って
-# GitHub の Releases に載せる。
+# GitHub でリリース（タグ v1.2.3 など）を公開すると、Windows 用の配布物
+# （.NET の入っていない PC でも動く zip）を作って、そのリリースに添付する。
 name: Release
 
 on:
-  push:
-    tags: [ 'v*' ]
+  release:
+    types: [ published ]
 
 permissions:
   contents: write
@@ -38,5 +38,5 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
-          gh release create "${{ github.ref_name }}" (Get-ChildItem TremorScope-*.zip).FullName `
-            --title "TremorScope ${{ github.ref_name }}" --generate-notes
+          $zip = (Get-ChildItem TremorScope-*.zip).FullName
+          gh release upload "${{ github.ref_name }}" $zip --clobber

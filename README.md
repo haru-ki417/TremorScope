@@ -99,7 +99,7 @@ TremorScope.exe --snapshots docs/screenshots
 ```
 
 - 警告はすべてエラー扱い（`TreatWarningsAsErrors`・.NET のコード解析 `latest-recommended`）
-- GitHub Actions: プッシュごとに Windows でビルド・テスト・マイグレーションの確認。`v*` タグで配布用 zip を Releases に作成
+- GitHub Actions: プッシュごとに Windows でビルド・テスト・マイグレーションの確認。リリースを公開すると配布用 zip を自動で添付
 
 ## 制限と今後
 
