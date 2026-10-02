@@ -33,7 +33,14 @@ TremorScope は、手順を決めた 2 回の測定と、診察の記録に貼�
 <td><img src="docs/screenshots/07-report.png" alt="レポート"></td>
 </tr>
 <tr><td align="center">測定中（残り秒数・ふるえの波形）</td><td align="center">レポート（印刷・PACS 用）</td></tr>
+<tr>
+<td><img src="docs/screenshots/05-history.png" alt="経過"></td>
+<td><img src="docs/screenshots/01-patients.png" alt="患者"></td>
+</tr>
+<tr><td align="center">経過（推移のグラフと一覧）</td><td align="center">患者（カルテ番号と仮名 ID）</td></tr>
 </table>
+
+画面の画像は、見本のデータ（DEMO-xxx・模擬センサー）で `TremorScope.exe --snapshots` を実行して作ったものです。
 
 ## 個人情報の扱い
 
@@ -61,7 +68,7 @@ flowchart LR
 | `src/TremorScope.Core` | 信号処理・解析・品質確認・比較・仮名化・CSV / DICOM（画面にも Azure にも依存しない） |
 | `src/TremorScope.Infrastructure` | IoT Hub 受信・SQLite（EF Core）・Cosmos DB・PACS・暗号化した設定 |
 | `src/TremorScope.App` | WPF の画面（MVVM）・レポートの描画 |
-| `tests/TremorScope.Tests` | 55 件のテスト（正解の分かる信号で解析を検証・保存と個人情報の確認 など） |
+| `tests/TremorScope.Tests` | 58 件のテスト（正解の分かる信号で解析を検証・保存と個人情報の確認 など） |
 | `firmware/TremorSensor` | ESP32 のファームウェア（参考実装） |
 
 ### 解析の手順
