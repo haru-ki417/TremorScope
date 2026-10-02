@@ -75,7 +75,9 @@ public static class SnapshotRunner
                 AppServices.AppVersion);
             var bitmap = ReportRenderer.Render(report);
             ReportRenderer.SavePng(bitmap, Path.Combine(outputDirectory, "07-report.png"));
-            var rgb = ReportRenderer.ToRgb(bitmap, out int w, out int h);
+            // DICOM（仮名モード）は、画像の中の ID も仮名 ID にしたレポートから作る
+            var pseudonymBitmap = ReportRenderer.Render(report with { PatientIdLabel = "仮名 ID", PatientIdValue = loaded.Summary.PseudonymId });
+            var rgb = ReportRenderer.ToRgb(pseudonymBitmap, out int w, out int h);
             var dicom = DicomReportBuilder.Build(rgb, w, h, loaded.Summary, PacsPatientIdMode.Pseudonym, AppServices.AppVersion);
             await dicom.SaveAsync(Path.Combine(outputDirectory, "08-report-pseudonym.dcm"));
             log.Add("07-report.png / 08-report-pseudonym.dcm");
