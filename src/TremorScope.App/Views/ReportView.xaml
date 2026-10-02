@@ -140,10 +140,22 @@
                 <ColumnDefinition Width="20" />
                 <ColumnDefinition Width="*" />
             </Grid.ColumnDefinitions>
-            <StackPanel>
-                <ContentControl Content="{Binding Rest}" ContentTemplate="{StaticResource ReportCondition}" />
-                <ContentControl Content="{Binding Postural}" ContentTemplate="{StaticResource ReportCondition}" />
-            </StackPanel>
+            <DockPanel>
+                <ContentControl DockPanel.Dock="Top" Content="{Binding Rest}" ContentTemplate="{StaticResource ReportCondition}" />
+                <ContentControl DockPanel.Dock="Top" Content="{Binding Postural}" ContentTemplate="{StaticResource ReportCondition}" />
+                <!-- 医師が手で書き込む欄（印刷して使う） -->
+                <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="1" CornerRadius="8" Padding="16,10">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Top" Text="所見・メモ（記入欄）" FontSize="12" FontWeight="SemiBold" Foreground="{StaticResource Ink2Brush}" />
+                        <UniformGrid Rows="4">
+                            <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" />
+                            <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" />
+                            <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" />
+                            <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" />
+                        </UniformGrid>
+                    </DockPanel>
+                </Border>
+            </DockPanel>
             <DockPanel Grid.Column="2">
                 <TextBlock DockPanel.Dock="Top" Text="周波数の分布（スペクトル）　帯: 4〜6 Hz" FontSize="13" FontWeight="SemiBold" Foreground="{StaticResource Ink2Brush}" />
                 <Image Source="{Binding SpectrumImage}" Stretch="Uniform" VerticalAlignment="Top" Margin="0,6,0,0" />

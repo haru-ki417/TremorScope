@@ -25,6 +25,8 @@ public static class PlotTheme
         plot.Legend.BackgroundColor = Surface.WithAlpha(0.9);
         plot.Legend.OutlineColor = Line;
         plot.Legend.FontColor = Ink;
+        plot.Axes.Bottom.TickLabelStyle.FontSize = 12;
+        plot.Axes.Left.TickLabelStyle.FontSize = 12;
     }
 
     /// <summary>安静時・姿勢時のスペクトルを重ねて描く</summary>
@@ -65,12 +67,12 @@ public static class PlotTheme
     {
         var plot = new Plot();
         DrawSpectrum(plot, rest, postural, 3f);
-        plot.Axes.Bottom.Label.FontSize = 20;
-        plot.Axes.Left.Label.FontSize = 20;
-        plot.Axes.Bottom.TickLabelStyle.FontSize = 17;
-        plot.Axes.Left.TickLabelStyle.FontSize = 17;
-        plot.Legend.FontSize = 18;
-        plot.Font.Automatic();
+        // 書体を決めたあとで大きさを指定する（レポートでは縮小して載せるので、文字を大きめにする）
+        plot.Axes.Bottom.Label.FontSize = 30;
+        plot.Axes.Left.Label.FontSize = 30;
+        plot.Axes.Bottom.TickLabelStyle.FontSize = 26;
+        plot.Axes.Left.TickLabelStyle.FontSize = 26;
+        plot.Legend.FontSize = 26;
         return plot.GetImageBytes(width, height, ImageFormat.Png);
     }
 
@@ -101,7 +103,7 @@ public static class PlotTheme
             plot.Axes.SetLimits(lo, hi, 0, Math.Max(ymax * 1.2, 5));
         }
         plot.YLabel("ふるえの大きさ（mg）", 13);
-        plot.ShowLegend(Alignment.UpperLeft);
+        plot.ShowLegend(Edge.Right); // グラフの外（右）に置き、点と重ならないようにする
         plot.Font.Automatic();
     }
 

@@ -99,8 +99,7 @@
                         <Border Style="{StaticResource Chip}" DockPanel.Dock="Left" Background="{Binding IsRest, Converter={StaticResource ConditionBrush}, ConverterParameter=Soft}">
                             <TextBlock Text="{Binding ConditionLabel}" FontWeight="Bold" FontSize="13" Foreground="{Binding IsRest, Converter={StaticResource ConditionBrush}}" />
                         </Border>
-                        <TextBlock Text="ふるえの成分（重力と姿勢のゆっくりした変化を除いた値）" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="12,0,0,0" />
-                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
                             <Ellipse Width="8" Height="8" Margin="0,0,7,0">
                                 <Ellipse.Style>
                                     <Style TargetType="Ellipse">
@@ -113,8 +112,11 @@
                                     </Style>
                                 </Ellipse.Style>
                             </Ellipse>
-                            <TextBlock Text="{Binding SensorStatus}" Style="{StaticResource Muted}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" MaxWidth="360" />
+                            <TextBlock Text="{Binding SensorStatus}" Style="{StaticResource Muted}" TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" MaxWidth="340"
+                                       ToolTip="{Binding SensorStatus}" />
                         </StackPanel>
+                        <TextBlock Text="ふるえの成分（重力と姿勢のゆっくりした変化を除いた値）" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="12,0,0,0"
+                                   TextWrapping="NoWrap" TextTrimming="CharacterEllipsis" />
                     </DockPanel>
                     <sp:WpfPlot x:Name="LivePlot" />
                 </DockPanel>
