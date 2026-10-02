@@ -80,8 +80,9 @@ public static class PlotTheme
         ArgumentNullException.ThrowIfNull(plot);
         ArgumentNullException.ThrowIfNull(points);
         plot.Clear();
-        Apply(plot);
+        // 日付の軸に置き換えてから色をそろえる（置き換えると軸の色が既定に戻るため）
         plot.Axes.DateTimeTicksBottom();
+        Apply(plot);
         foreach (var (pick, color, label) in new (Func<SessionSummaryPoint, double?>, Color, string)[]
                  { (p => p.RestMg, Rest, "安静時"), (p => p.PosturalMg, Postural, "姿勢時") })
         {

@@ -91,14 +91,15 @@ public static class SnapshotRunner
         }
         finally
         {
-            await File.WriteAllLinesAsync(Path.Combine(outputDirectory, "snapshots.log"), log);
             try
             {
+                await File.WriteAllLinesAsync(Path.Combine(outputDirectory, "snapshots.log"), log);
                 Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
                 Directory.Delete(temp, recursive: true);
             }
-            catch (IOException)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
+                System.Diagnostics.Debug.WriteLine(ex);
             }
         }
     }

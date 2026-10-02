@@ -125,9 +125,16 @@ public sealed partial class ResultViewModel(MainViewModel main, Guid sessionId) 
             FileName = $"tremor_{Session.LocalId}_{Session.MeasuredAtUtc.ToLocalTime():yyyyMMdd_HHmm}.png",
         };
         if (dialog.ShowDialog() != true) return;
-        var bitmap = ReportRenderer.Render(BuildReport(PacsPatientIdMode.LocalId));
-        ReportRenderer.SavePng(bitmap, dialog.FileName);
-        Message = "レポートを保存しました。";
+        try
+        {
+            var bitmap = ReportRenderer.Render(BuildReport(PacsPatientIdMode.LocalId));
+            ReportRenderer.SavePng(bitmap, dialog.FileName);
+            Message = "レポートを保存しました。";
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Message = "保存できませんでした: " + ex.Message;
+        }
     }
 
     [RelayCommand]
@@ -144,10 +151,18 @@ public sealed partial class ResultViewModel(MainViewModel main, Guid sessionId) 
         if (Session is null || recordings.Count == 0) return;
         var dialog = new OpenFolderDialog { Title = "波形の CSV を保存するフォルダー" };
         if (dialog.ShowDialog() != true) return;
-        foreach (var r in recordings)
+        try
         {
-            string name = $"tremor_{Session.PseudonymId}_{Session.MeasuredAtUtc.ToLocalTime():yyyyMMdd_HHmm}_{r.Condition.ToString().ToLowerInvariant()}.csv";
-            File.WriteAllText(Path.Combine(dialog.FolderName, name), CsvExporter.Waveform(r), CsvExporter.Encoding);
+            foreach (var r in recordings)
+            {
+                string name = $"tremor_{Session.PseudonymId}_{Session.MeasuredAtUtc.ToLocalTime():yyyyMMdd_HHmm}_{r.Condition.ToString().ToLowerInvariant()}.csv";
+                File.WriteAllText(Path.Combine(dialog.FolderName, name), CsvExporter.Waveform(r), CsvExporter.Encoding);
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Message = "保存できませんでした: " + ex.Message;
+            return;
         }
         Message = $"波形を {recordings.Count} 個の CSV に保存しました（ファイル名は仮名 ID）。";
     }

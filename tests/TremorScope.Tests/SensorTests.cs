@@ -94,4 +94,28 @@ public class SensorTests
         Assert.Equal(75, buffer.Collected);
         Assert.Equal(50, buffer.MissingSamples);
     }
+
+    [Fact]
+    public void 終わり間際の途切れは_記録の残りの分だけを欠けとして数える()
+    {
+        // 10 秒（500 点）のうち 475 点を集めたところで 2 秒（100 点）途切れた → 欠けは残りの 25 点だけ
+        var buffer = new RecordingBuffer(Condition.Rest, 50, durationSeconds: 10, settleSeconds: 0);
+        for (long seq = 0; seq < 475; seq += 25) buffer.Add(Packet(seq));
+        buffer.Add(Packet(575));
+        Assert.True(buffer.IsComplete);
+        Assert.Equal(475, buffer.Collected);
+        Assert.Equal(25, buffer.MissingSamples);
+    }
+
+    [Fact]
+    public void センサーが再起動して番号が大きく戻ったら_数え直して記録を続ける()
+    {
+        var buffer = new RecordingBuffer(Condition.Rest, 50, durationSeconds: 10, settleSeconds: 0);
+        buffer.Add(Packet(100_000));
+        buffer.Add(Packet(100_025));
+        buffer.Add(Packet(0));   // 再起動
+        buffer.Add(Packet(25));
+        Assert.Equal(100, buffer.Collected);
+        Assert.Equal(0, buffer.MissingSamples);
+    }
 }

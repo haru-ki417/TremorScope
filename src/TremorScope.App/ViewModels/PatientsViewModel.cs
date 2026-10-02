@@ -25,6 +25,7 @@ public sealed class PatientRow(PatientListItem item)
 public sealed partial class PatientsViewModel(MainViewModel main) : ObservableObject
 {
     private CancellationTokenSource? searchCts;
+    private int loadVersion;
 
     public ObservableCollection<PatientRow> Patients { get; } = [];
 
@@ -75,7 +76,9 @@ public sealed partial class PatientsViewModel(MainViewModel main) : ObservableOb
 
     public async Task LoadAsync()
     {
+        int version = ++loadVersion;
         var list = await main.Services.Store.ListPatientsAsync(Search);
+        if (version != loadVersion) return; // あとから始めた検索の結果を優先する
         Patients.Clear();
         foreach (var p in list) Patients.Add(new PatientRow(p));
         IsEmpty = Patients.Count == 0;

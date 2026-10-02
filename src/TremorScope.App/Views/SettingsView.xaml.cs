@@ -16,6 +16,9 @@ public partial class SettingsView : UserControl
         {
             if (vm is not null) vm.SecretsSaved -= OnSaved;
             vm = DataContext as SettingsViewModel;
+            // 画面が使い回されても、前に入力した秘密が残らないようにする
+            IotBox.Clear();
+            CosmosBox.Clear();
             if (vm is not null) vm.SecretsSaved += OnSaved;
         };
     }

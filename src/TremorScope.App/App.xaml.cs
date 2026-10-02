@@ -19,8 +19,14 @@ public partial class App : Application
         {
             ShutdownMode = ShutdownMode.OnExplicitShutdown;
             string dir = at + 1 < e.Args.Length ? e.Args[at + 1] : Path.Combine(Environment.CurrentDirectory, "snapshots");
-            await SnapshotRunner.RunAsync(Path.GetFullPath(dir));
-            Shutdown(0);
+            try
+            {
+                await SnapshotRunner.RunAsync(Path.GetFullPath(dir));
+            }
+            finally
+            {
+                Shutdown(0);
+            }
             return;
         }
 

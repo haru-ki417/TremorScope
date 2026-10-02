@@ -57,43 +57,59 @@ public sealed partial class MainViewModel : ObservableObject
     [RelayCommand]
     public void ShowPatients()
     {
-        Section = "patients";
         var vm = new PatientsViewModel(this);
+        Section = "patients";
         CurrentPage = vm;
-        _ = vm.LoadAsync();
+        Load(vm.LoadAsync());
     }
 
     [RelayCommand(CanExecute = nameof(HasPatient))]
     public void ShowMeasure()
     {
         if (CurrentPatient is null) return;
+        var vm = new MeasureViewModel(this, CurrentPatient);
         Section = "measure";
-        CurrentPage = new MeasureViewModel(this, CurrentPatient);
+        CurrentPage = vm;
     }
 
     [RelayCommand(CanExecute = nameof(HasPatient))]
     public void ShowHistory()
     {
         if (CurrentPatient is null) return;
-        Section = "history";
         var vm = new HistoryViewModel(this, CurrentPatient);
+        Section = "history";
         CurrentPage = vm;
-        _ = vm.LoadAsync();
+        Load(vm.LoadAsync());
     }
 
     [RelayCommand]
     public void ShowSettings()
     {
+        var vm = new SettingsViewModel(this);
         Section = "settings";
-        CurrentPage = new SettingsViewModel(this);
+        CurrentPage = vm;
     }
 
     public void ShowResult(Guid sessionId)
     {
-        Section = "history";
         var vm = new ResultViewModel(this, sessionId);
+        Section = "history";
         CurrentPage = vm;
-        _ = vm.LoadAsync();
+        Load(vm.LoadAsync());
+    }
+
+    /// <summary>画面のデータの読み込みに失敗したら、理由を知らせる（何も出ないまま空の画面にしない）</summary>
+    private static async void Load(Task loading)
+    {
+        try
+        {
+            await loading;
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show("データを読み込めませんでした。\n\n" + ex.Message, "TremorScope",
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+        }
     }
 
     public void SelectPatient(PatientListItem? patient)

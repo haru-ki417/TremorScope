@@ -79,7 +79,15 @@ public sealed partial class HistoryViewModel(MainViewModel main, PatientListItem
             FileName = $"tremor_{(IncludeLocalId ? Patient.LocalId : Patient.PseudonymId)}_{DateTime.Now:yyyyMMdd}.csv",
         };
         if (dialog.ShowDialog() != true) return;
-        File.WriteAllText(dialog.FileName, CsvExporter.Sessions(Sessions.Select(s => s.Summary), IncludeLocalId), CsvExporter.Encoding);
+        try
+        {
+            File.WriteAllText(dialog.FileName, CsvExporter.Sessions(Sessions.Select(s => s.Summary), IncludeLocalId), CsvExporter.Encoding);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            Message = "保存できませんでした（ファイルを開いたままになっていませんか）: " + ex.Message;
+            return;
+        }
         Message = IncludeLocalId ? "保存しました（カルテ番号を含みます。取り扱いに注意してください）。" : "保存しました（カルテ番号は含みません）。";
     }
 }

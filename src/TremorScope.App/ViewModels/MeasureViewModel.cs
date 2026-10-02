@@ -60,7 +60,7 @@ public sealed partial class MeasureViewModel : ObservableObject, IAsyncDisposabl
     public partial Condition CurrentCondition { get; set; } = Condition.Rest;
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsPrepare), nameof(IsRunning), nameof(IsReview), nameof(IsSaving), nameof(NextLabel))]
+    [NotifyPropertyChangedFor(nameof(IsPrepare), nameof(IsRunning), nameof(IsReview), nameof(IsSaving), nameof(NextLabel), nameof(StepIndex))]
     public partial MeasureStage Stage { get; set; } = MeasureStage.Prepare;
 
     [ObservableProperty]
@@ -136,9 +136,10 @@ public sealed partial class MeasureViewModel : ObservableObject, IAsyncDisposabl
         {
             source = main.Services.CreateSource(() => CurrentCondition);
         }
-        catch (InvalidOperationException ex)
+        catch (Exception ex)
         {
-            SensorStatus = ex.Message;
+            // 接続文字列の誤り・暗号化した設定を読めない など。画面は開いたまま、理由を表示する
+            SensorStatus = ex is InvalidOperationException ? ex.Message : "センサーに接続できません。設定画面で接続文字列を確認してください。（" + ex.Message + "）";
             return;
         }
         _ = PumpAsync(source, streamCts.Token);
@@ -165,6 +166,12 @@ public sealed partial class MeasureViewModel : ObservableObject, IAsyncDisposabl
             {
                 SensorLive = false;
                 SensorStatus = "センサーの受信でエラーが起きました（5 秒後につなぎ直します）: " + ex.Message;
+                if (IsRunning)
+                {
+                    // 途中で途切れた記録は使わない
+                    Abort();
+                    ErrorMessage = "通信が途切れたため、測定を中止しました。信号が戻ったら、もう一度開始してください。";
+                }
             }
             try
             {
@@ -249,6 +256,7 @@ public sealed partial class MeasureViewModel : ObservableObject, IAsyncDisposabl
         }
         ErrorMessage = null;
         ReviewCard = null;
+        results.Remove(CurrentCondition); // 取り直す場合、前の結果は使わない
         buffer = new RecordingBuffer(CurrentCondition, sampleRate, DurationSeconds, SettleSeconds);
         Stage = MeasureStage.Settling;
         Progress = 0;
@@ -264,6 +272,7 @@ public sealed partial class MeasureViewModel : ObservableObject, IAsyncDisposabl
     private void Abort()
     {
         buffer = null;
+        results.Remove(CurrentCondition);
         Stage = MeasureStage.Prepare;
         Progress = 0;
     }
@@ -317,6 +326,7 @@ public sealed partial class MeasureViewModel : ObservableObject, IAsyncDisposabl
     [RelayCommand]
     private async Task FinishWithRestOnlyAsync()
     {
+        results.Remove(Condition.Postural);
         CurrentCondition = Condition.Postural;
         await NextAsync();
     }

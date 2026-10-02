@@ -35,7 +35,9 @@ public sealed class MeasurementStore(Func<TremorDbContext> createContext, Pseudo
         if (!string.IsNullOrWhiteSpace(search))
         {
             string s = Pseudonymizer.Normalize(search);
-            query = query.Where(p => p.LocalId.Contains(s) || p.PseudonymId.Contains(s) || (p.Note != null && p.Note.Contains(search.Trim())));
+            // メモは大文字・小文字を区別せずに探す（SQLite の LIKE）。% と _ は文字として扱う
+            string like = "%" + search.Trim().Replace("\\", "\\\\", StringComparison.Ordinal).Replace("%", "\\%", StringComparison.Ordinal).Replace("_", "\\_", StringComparison.Ordinal) + "%";
+            query = query.Where(p => p.LocalId.Contains(s) || p.PseudonymId.Contains(s) || (p.Note != null && EF.Functions.Like(p.Note, like, "\\")));
         }
         var list = await query
             .Select(p => new PatientListItem(p.Id, p.LocalId, p.PseudonymId, p.Note, p.Sessions.Count, p.Sessions.Max(s => (DateTime?)s.MeasuredAtUtc)))

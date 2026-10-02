@@ -39,6 +39,9 @@ public sealed class RecordingBuffer
     /// <summary>通し番号の飛びから数えた、届かなかった点の数（記録に使う区間のみ）</summary>
     public int MissingSamples { get; private set; }
 
+    /// <summary>この秒数以内の「戻り」は重複として捨てる</summary>
+    private const double DuplicateWindowSeconds = 5;
+
     private int SettleSamples => (int)Math.Round(settleSeconds * SampleRate);
 
     private int TargetSamples => (int)Math.Round(DurationSeconds * SampleRate);
@@ -73,13 +76,22 @@ public sealed class RecordingBuffer
         {
             if (nextSequence is long expected && seq > expected)
             {
-                long gap = Math.Min(seq - expected, TargetSamples);
-                if (skipped >= SettleSamples) MissingSamples += (int)gap;
-                else skipped += (int)Math.Min(gap, SettleSamples - skipped);
+                long gap = seq - expected;
+                // 落ち着くまでの区間に入る分は捨てる区間として数え、残りを欠けとして数える（記録の残りの長さを超えては数えない）
+                int toSettle = (int)Math.Min(gap, SettleSamples - skipped);
+                skipped += toSettle;
+                long remaining = TargetSamples - (Collected + MissingSamples);
+                MissingSamples += (int)Math.Clamp(gap - toSettle, 0, Math.Max(remaining, 0));
+                if (IsComplete)
+                {
+                    nextSequence = seq + packet.Count;
+                    return [];
+                }
             }
             else if (nextSequence is long e2 && seq < e2)
             {
-                return []; // 重複・逆順のメッセージは捨てる
+                // 少し戻っただけなら重複（再送）として捨てる。大きく戻ったらセンサーが再起動したとみなし、番号を数え直す
+                if (e2 - seq <= SampleRate * DuplicateWindowSeconds) return [];
             }
             nextSequence = seq + packet.Count;
         }

@@ -129,6 +129,18 @@ public sealed class InfrastructureTests : IDisposable
         Assert.Equal(3, doc.Conditions[0].Samples.Length);
     }
 
+    [Fact]
+    public async Task メモは大文字小文字を区別せずに探せ_記号はそのまま文字として扱う()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var store = await NewStoreAsync();
+        await store.GetOrCreatePatientAsync("P100", "Demo 50%_case", ct);
+        await store.GetOrCreatePatientAsync("P200", "other", ct);
+        Assert.Single(await store.ListPatientsAsync("demo", ct));
+        Assert.Single(await store.ListPatientsAsync("50%_", ct));
+        Assert.Empty(await store.ListPatientsAsync("5_%", ct));
+    }
+
     [Theory]
     [InlineData("", false)]
     [InlineData("HostName=x.azure-devices.net;SharedAccessKeyName=service;SharedAccessKey=abc", false)]
