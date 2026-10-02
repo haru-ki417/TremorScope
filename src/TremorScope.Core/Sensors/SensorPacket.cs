@@ -14,6 +14,7 @@ public sealed record SensorPacket(double[][] Axes, string? DeviceId = null, long
 ///   旧形式（試作版のセンサー）:  { "data": [0.012, -0.004, ...] }
 ///   新形式（推奨）:             { "v": 2, "device": "tremor-01", "seq": 1200, "fs": 50,
 ///                                 "ax": [...], "ay": [...], "az": [...] }
+///   新形式・整数（通信量を減らす）:  上に "scale": 0.001 を加え、値を mg の整数で送る（値 × scale = g）
 ///
 /// 新形式の seq は「最初の点の通し番号」で、途中のメッセージが届かなかったときに、何点欠けたかを数えるのに使う。
 /// </summary>
@@ -33,12 +34,17 @@ public static class SensorMessageParser
 
             if (root.TryGetProperty("ax", out var ax) && root.TryGetProperty("ay", out var ay) && root.TryGetProperty("az", out var az))
             {
-                var x = ReadArray(ax); var y = ReadArray(ay); var z = ReadArray(az);
+                double scale = 1;
+                if (root.TryGetProperty("scale", out var sc))
+                {
+                    if (sc.ValueKind != JsonValueKind.Number || !sc.TryGetDouble(out scale) || !double.IsFinite(scale) || scale <= 0 || scale > 1) return false;
+                }
+                var x = ReadArray(ax, scale); var y = ReadArray(ay, scale); var z = ReadArray(az, scale);
                 if (x is null || y is null || z is null || x.Length != y.Length || x.Length != z.Length || x.Length == 0) return false;
                 packet = new SensorPacket([x, y, z],
                     DeviceId: root.TryGetProperty("device", out var d) && d.ValueKind == JsonValueKind.String ? d.GetString() : null,
-                    Sequence: root.TryGetProperty("seq", out var s) && s.TryGetInt64(out long seq) && seq >= 0 ? seq : null,
-                    SampleRate: root.TryGetProperty("fs", out var f) && f.TryGetDouble(out double fs) && fs is > 0 and <= 2000 ? fs : null);
+                    Sequence: root.TryGetProperty("seq", out var s) && s.ValueKind == JsonValueKind.Number && s.TryGetInt64(out long seq) && seq >= 0 ? seq : null,
+                    SampleRate: root.TryGetProperty("fs", out var f) && f.ValueKind == JsonValueKind.Number && f.TryGetDouble(out double fs) && fs is > 0 and <= 2000 ? fs : null);
                 return true;
             }
 
@@ -57,7 +63,7 @@ public static class SensorMessageParser
         }
     }
 
-    private static double[]? ReadArray(JsonElement element)
+    private static double[]? ReadArray(JsonElement element, double scale = 1)
     {
         if (element.ValueKind != JsonValueKind.Array) return null;
         int length = element.GetArrayLength();
@@ -66,7 +72,9 @@ public static class SensorMessageParser
         int i = 0;
         foreach (var item in element.EnumerateArray())
         {
-            if (item.ValueKind != JsonValueKind.Number || !item.TryGetDouble(out double v) || !double.IsFinite(v) || Math.Abs(v) > 64) return null;
+            if (item.ValueKind != JsonValueKind.Number || !item.TryGetDouble(out double raw)) return null;
+            double v = raw * scale;
+            if (!double.IsFinite(v) || Math.Abs(v) > 64) return null;
             values[i++] = v;
         }
         return values;

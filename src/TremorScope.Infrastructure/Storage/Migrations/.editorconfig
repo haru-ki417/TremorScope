@@ -1,0 +1,6 @@
+# 自動生成されたマイグレーションには、コード解析の指摘を当てはめない
+root = false
+
+[*.cs]
+generated_code = true
+dotnet_diagnostic.CA1861.severity = none

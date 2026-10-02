@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    # 画面（WPF）も含めて、実際に使う Windows で確かめる
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore TremorScope.slnx
+
+      - name: Build
+        run: dotnet build TremorScope.slnx --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test --solution TremorScope.slnx --configuration Release --no-build
+
+      # データの形（エンティティ）を変えたのに、データベースの変更手順（マイグレーション）を作り忘れていないか
+      - name: Check migrations are up to date
+        run: |
+          dotnet tool restore
+          dotnet ef migrations has-pending-model-changes -p src/TremorScope.Infrastructure -s src/TremorScope.Infrastructure --configuration Release --no-build

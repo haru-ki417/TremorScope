@@ -27,8 +27,29 @@ public class SensorTests
         Assert.Equal(("tremor-01", 100L, 50.0), (p.DeviceId!, p.Sequence!.Value, p.SampleRate!.Value));
     }
 
+    [Fact]
+    public void 整数_mg_で送られた値を_g_に直して読む()
+    {
+        var p = Parse("""{"v":2,"seq":0,"fs":50,"scale":0.001,"ax":[12,-3],"ay":[0,5],"az":[998,1003]}""");
+        Assert.NotNull(p);
+        Assert.Equal(0.012, p.Axes[0][0], 1e-12);
+        Assert.Equal(1.003, p.Axes[2][1], 1e-12);
+    }
+
+    [Fact]
+    public void 通し番号やサンプリング周波数が数値でなければ_その項目だけ無視する()
+    {
+        var p = Parse("""{"seq":"x","fs":"fast","ax":[0.1],"ay":[0],"az":[1]}""");
+        Assert.NotNull(p);
+        Assert.Null(p.Sequence);
+        Assert.Null(p.SampleRate);
+    }
+
     [Theory]
     [InlineData("not json")]
+    [InlineData("""{"scale":0,"ax":[1],"ay":[1],"az":[1]}""")]
+    [InlineData("""{"scale":"x","ax":[1],"ay":[1],"az":[1]}""")]
+    [InlineData("""{"scale":0.001,"ax":[99999],"ay":[1],"az":[1]}""")]
     [InlineData("""{"data":"abc"}""")]
     [InlineData("""{"data":[1,"x"]}""")]
     [InlineData("""{"ax":[1,2],"ay":[1],"az":[1,2]}""")]

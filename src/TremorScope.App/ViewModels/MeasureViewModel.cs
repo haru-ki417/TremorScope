@@ -146,21 +146,34 @@ public sealed partial class MeasureViewModel : ObservableObject, IAsyncDisposabl
 
     private async Task PumpAsync(ISampleSource s, CancellationToken token)
     {
-        try
+        // 通信が切れても、画面を開いている間は数秒おきにつなぎ直す
+        while (!token.IsCancellationRequested)
         {
-            // 画面のスレッドで受け取る（await の続きが画面のスレッドに戻る）
-            await foreach (var packet in s.ReadAsync(token))
+            try
             {
-                OnPacket(packet);
+                // 画面のスレッドで受け取る（await の続きが画面のスレッドに戻る）
+                await foreach (var packet in s.ReadAsync(token))
+                {
+                    OnPacket(packet);
+                }
             }
-        }
-        catch (OperationCanceledException)
-        {
-        }
-        catch (Exception ex)
-        {
-            SensorLive = false;
-            SensorStatus = "センサーの受信でエラーが起きました: " + ex.Message;
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+            catch (Exception ex)
+            {
+                SensorLive = false;
+                SensorStatus = "センサーの受信でエラーが起きました（5 秒後につなぎ直します）: " + ex.Message;
+            }
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(5), token);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
         }
     }
 

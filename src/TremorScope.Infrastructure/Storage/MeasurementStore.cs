@@ -22,7 +22,8 @@ public sealed class MeasurementStore(Func<TremorDbContext> createContext, Pseudo
     public async Task InitializeAsync(CancellationToken cancellationToken = default)
     {
         await using var db = createContext();
-        await db.Database.EnsureCreatedAsync(cancellationToken);
+        // 新しい版で表の形が変わっても、保存済みのデータを残したまま更新する
+        await db.Database.MigrateAsync(cancellationToken);
     }
 
     // ---- 患者

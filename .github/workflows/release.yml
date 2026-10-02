@@ -1,0 +1,42 @@
+# v1.2.3 のようなタグを付けると、Windows 用の配布物（.NET の入っていない PC でも動く zip）を作って
+# GitHub の Releases に載せる。
+name: Release
+
+on:
+  push:
+    tags: [ 'v*' ]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Test
+        run: dotnet test --solution TremorScope.slnx --configuration Release
+
+      - name: Publish (self-contained, win-x64)
+        shell: pwsh
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          dotnet publish src/TremorScope.App -c Release -r win-x64 --self-contained true `
+            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=true `
+            -p:Version=$version -p:DebugType=none -o publish/TremorScope
+          Copy-Item LICENSE, THIRD_PARTY_NOTICES.md publish/TremorScope/
+          Compress-Archive -Path publish/TremorScope/* -DestinationPath "TremorScope-$version-win-x64.zip"
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          gh release create "${{ github.ref_name }}" (Get-ChildItem TremorScope-*.zip).FullName `
+            --title "TremorScope ${{ github.ref_name }}" --generate-notes

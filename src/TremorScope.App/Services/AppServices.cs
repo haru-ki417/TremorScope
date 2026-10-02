@@ -22,7 +22,7 @@ public sealed class AppServices
     }
 
     /// <summary>データの置き場所（この PC の中だけ。ほかの PC へ同期されない場所）</summary>
-    public static string DataDirectory { get; } =
+    public static string DataDirectory { get; private set; } =
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "TremorScope");
 
     public static string AppVersion { get; } =
@@ -36,8 +36,10 @@ public sealed class AppServices
 
     public event EventHandler? SettingsChanged;
 
-    public static async Task<AppServices> CreateAsync()
+    /// <param name="dataDirectory">データの置き場所を変える（見本の画面を作るときなど、本番のデータに触れないため）</param>
+    public static async Task<AppServices> CreateAsync(string? dataDirectory = null)
     {
+        if (dataDirectory is not null) DataDirectory = dataDirectory;
         var settingsStore = new SettingsStore(DataDirectory, new DpapiProtector());
         var settings = settingsStore.LoadSettings();
         var pseudonymizer = new Pseudonymizer(settingsStore.GetOrCreateSiteKey());

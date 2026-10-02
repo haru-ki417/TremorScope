@@ -2,10 +2,11 @@
 //   ESP32 + MPU6050（3軸加速度）→ Wi-Fi → Azure IoT Hub（MQTT over TLS）
 //
 //   ・50Hz で 3 軸の加速度を測り、0.5 秒（25 点）ごとに 1 通のメッセージにまとめて送る
-//   ・送る形（TremorScope の「新形式」）:
-//       {"v":2,"device":"tremor-01","seq":1200,"fs":50,"ax":[...],"ay":[...],"az":[...]}
-//     値の単位は g。seq は先頭の点の通し番号で、届かなかったメッセージがあっても
-//     アプリ側で「何点欠けたか」を数えられる。
+//   ・送る形（TremorScope の「新形式・整数」）:
+//       {"v":2,"device":"tremor-01","seq":1200,"fs":50,"scale":0.001,"ax":[...],"ay":[...],"az":[...]}
+//     値は mg の整数（× scale で g）。小数で送るより約半分の大きさになり、
+//     IoT Hub の Free レベル（0.5KB ごとに 1 メッセージと数える）でも 1 通 = 1 メッセージに収まる。
+//     seq は先頭の点の通し番号で、届かなかったメッセージがあってもアプリ側で「何点欠けたか」を数えられる。
 //   ・測るのは専用のタスク（コア 1）、送るのは loop（コア 0 側の Wi-Fi と同じ）に分けて、
 //     通信が遅れても測る間隔がずれないようにしている。
 //
@@ -191,7 +192,7 @@ static void appendArray(String& s, const char* name, const float* v) {
   s += ",\""; s += name; s += "\":[";
   for (int i = 0; i < SAMPLES_PER_MESSAGE; i++) {
     if (i) s += ',';
-    s += String(v[i], 4);
+    s += String((long)lroundf(v[i] * 1000.0f));  // mg の整数
   }
   s += ']';
 }
@@ -226,11 +227,12 @@ void loop() {
   Block block;
   while (mqtt.connected() && xQueueReceive(blockQueue, &block, pdMS_TO_TICKS(50)) == pdTRUE) {
     String json;
-    json.reserve(1100);
+    json.reserve(600);
     json += "{\"v\":2,\"device\":\"" IOT_DEVICE_ID "\",\"seq\":";
     json += String((unsigned long long)block.seq);
     json += ",\"fs\":";
     json += SAMPLE_RATE_HZ;
+    json += ",\"scale\":0.001";
     appendArray(json, "ax", block.ax);
     appendArray(json, "ay", block.ay);
     appendArray(json, "az", block.az);

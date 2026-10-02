@@ -12,6 +12,18 @@ public partial class App : Application
     {
         base.OnStartup(e);
         DispatcherUnhandledException += OnUnhandled;
+
+        // 見本の画面を画像に保存して終わる: TremorScope.exe --snapshots フォルダー
+        int at = Array.IndexOf(e.Args, "--snapshots");
+        if (at >= 0)
+        {
+            ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            string dir = at + 1 < e.Args.Length ? e.Args[at + 1] : Path.Combine(Environment.CurrentDirectory, "snapshots");
+            await SnapshotRunner.RunAsync(Path.GetFullPath(dir));
+            Shutdown(0);
+            return;
+        }
+
         try
         {
             var services = await AppServices.CreateAsync();
