@@ -35,6 +35,7 @@ public partial class App : Application
             var services = await AppServices.CreateAsync();
             var window = new MainWindow { DataContext = new MainViewModel(services) };
             MainWindow = window;
+            window.StartMaximized();
             window.Show();
         }
         catch (Exception ex)
