@@ -1,0 +1,21 @@
+@* 姿勢の図（横から見た図）。スマホ（センサー）は手の甲に乗せる *@
+<svg class="pose @Labels.ConditionKey(Condition)" viewBox="0 0 120 100" aria-hidden="true">
+    <path class="chair" d="M24 64 H62 M28 64 V96 M58 64 V96 M24 64 V30" />
+    <circle class="body" cx="40" cy="18" r="8" />
+    <path class="body" d="M40 27 V62 H74 V94 H84" />
+    @if (Condition == Condition.Rest)
+    {
+        <path class="arm" d="M40 34 L52 56 H78" />
+        <rect class="phone" x="64" y="50" width="13" height="4" rx="1.2" />
+    }
+    else
+    {
+        <path class="arm" d="M40 34 H100" />
+        <rect class="phone" x="86" y="28" width="13" height="4" rx="1.2" />
+        <path class="hint" d="M104 26 v-6 M104 42 v6" />
+    }
+</svg>
+
+@code {
+    [Parameter, EditorRequired] public Condition Condition { get; set; }
+}

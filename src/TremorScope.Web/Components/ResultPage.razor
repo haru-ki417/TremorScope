@@ -1,0 +1,90 @@
+@* 結果: 安静時と姿勢時の比較・各条件の数値・スペクトル（印刷するとレポートになる） *@
+@inherits LabComponent
+
+@if (L.Current is { } s)
+{
+    var rest = s.RestResult?.Metrics;
+    var post = s.PosturalResult?.Metrics;
+    <div class="page result-page">
+        <header class="page-head">
+            <div>
+                <div class="kicker">RESULT · @s.DisplayLabel</div>
+                <h1>@Labels.Pattern(s.Comparison.Pattern)</h1>
+                <p class="meta">@Labels.LocalTime(s.MeasuredAtUtc) · @Labels.Hand(s.Hand)@(string.IsNullOrWhiteSpace(s.Note) ? "" : " · " + s.Note) · @s.Source</p>
+            </div>
+            <div class="head-actions no-print">
+                <button class="btn" @onclick="() => L.PrintAsync()"><Icon Name="print" />印刷・PDF</button>
+                <button class="btn" @onclick="() => L.ExportSessionsCsvAsync([s], CsvName(s))"><Icon Name="download" />結果 CSV</button>
+                <button class="btn ghost danger" @onclick="() => confirmDelete = true"><Icon Name="trash" />削除</button>
+            </div>
+        </header>
+
+        <section class="card compare">
+            <h2 class="card-title">安静時と姿勢時の比較</h2>
+            <p class="compare-text">@s.Comparison.Summary</p>
+            @if (rest is not null && post is not null)
+            {
+                double total = Math.Max(rest.RmsAccelerationMg + post.RmsAccelerationMg, 1e-9);
+                double rp = Math.Clamp(rest.RmsAccelerationMg / total * 100, 3, 97);
+                <div class="compare-bar"><span class="rest" style="width:@F(rp, "0.#")%"></span><span class="postural"></span></div>
+                <div class="compare-legend">
+                    <span class="rest">安静時 <b>@Labels.Auto(rest.RmsAccelerationMg)</b> mg</span>
+                    <span class="postural">姿勢時 <b>@Labels.Auto(post.RmsAccelerationMg)</b> mg</span>
+                </div>
+            }
+            <p class="small muted">「目立ったふるえ」の基準: @Labels.Auto(s.ThresholdMg) mg（RMS）。一方がもう一方の 1.5 倍以上なら「〜の方が大きい」とします。</p>
+        </section>
+
+        <div class="cond-grid">
+            <ConditionCard Condition="Condition.Rest" Metrics="rest">
+                <button class="link-btn no-print" @onclick="() => L.ExportWaveformAsync(s, Condition.Rest)"><Icon Name="download" Small="true" />波形 CSV</button>
+            </ConditionCard>
+            <ConditionCard Condition="Condition.Postural" Metrics="post">
+                <button class="link-btn no-print" @onclick="() => L.ExportWaveformAsync(s, Condition.Postural)"><Icon Name="download" Small="true" />波形 CSV</button>
+            </ConditionCard>
+        </div>
+
+        <section class="card">
+            <h2 class="card-title">周波数の分布（スペクトル）</h2>
+            <p class="small muted">山の位置がふるえの周波数、高さが強さです。帯は 4〜6 Hz（安静時振戦でよくみられる範囲）。</p>
+            <SpectrumChart Rest="s.RestResult" Postural="s.PosturalResult" />
+        </section>
+
+        <p class="disclaimer"><Icon Name="warn" Small="true" />@Labels.Disclaimer</p>
+        <p class="print-only small muted">TremorScope（ブラウザー版） · 解析 v@(TremorAnalyzer.AlgorithmVersion) · https://haru-ki417.github.io/TremorScope/</p>
+
+        <div class="row-actions no-print">
+            <button class="btn primary" @onclick="NewMeasurement"><Icon Name="measure" />新しく測る</button>
+            <button class="btn" @onclick="() => L.GoAsync(Page.History)"><Icon Name="history" />履歴と経過</button>
+        </div>
+    </div>
+
+    @if (confirmDelete)
+    {
+        <Modal Title="この記録を削除しますか" OnClose="() => confirmDelete = false">
+            <p>@Labels.LocalTime(s.MeasuredAtUtc) · @s.DisplayLabel の記録を、この端末から消します。元に戻せません。</p>
+            <div class="modal-foot">
+                <button class="btn" @onclick="() => confirmDelete = false">やめる</button>
+                <button class="btn primary danger" @onclick="Delete">削除する</button>
+            </div>
+        </Modal>
+    }
+}
+
+@code {
+    private bool confirmDelete;
+
+    private static string CsvName(Session s) => $"tremorscope_{s.MeasuredAtUtc.ToLocalTime():yyyyMMdd_HHmm}.csv";
+
+    private async Task Delete()
+    {
+        confirmDelete = false;
+        if (L.Current is { } s) await L.DeleteAsync(s);
+    }
+
+    private async Task NewMeasurement()
+    {
+        L.ResetFlow();
+        await L.GoAsync(Page.Measure);
+    }
+}

@@ -1,0 +1,226 @@
+@* 測定: 安静時 → 姿勢時 を画面の案内どおりに測る *@
+@inherits LabComponent
+@implements IAsyncDisposable
+@inject BrowserIo Io
+
+<div class="page measure-page">
+    <header class="page-head">
+        <div>
+            <div class="kicker">MEASURE</div>
+            <h1>測定</h1>
+        </div>
+        <ol class="steps" aria-label="測定の段階">
+            <li class="@(L.StepIndex == 0 ? "on" : L.HasRest ? "done" : "")"><span>1</span>安静時</li>
+            <li class="@(L.StepIndex == 1 ? "on" : "")"><span>2</span>姿勢時</li>
+            <li><span>3</span>結果</li>
+        </ol>
+    </header>
+
+    <div class="measure-grid">
+        <aside class="measure-side">
+            <section class="card">
+                <h2 class="card-title">測る人・手</h2>
+                <label class="field">
+                    <span class="field-label">名前・ID（任意）</span>
+                    <input class="text" list="known-labels" value="@L.Label" @onchange="e => L.Label = e.Value?.ToString() ?? string.Empty" placeholder="例: 自分、A さん" disabled="@L.IsRunning" maxlength="40" />
+                    <datalist id="known-labels">
+                        @foreach (var l in L.KnownLabels)
+                        {
+                            <option value="@l"></option>
+                        }
+                    </datalist>
+                </label>
+                <div class="field">
+                    <span class="field-label">測る手</span>
+                    <div class="segments full">
+                        <button class="seg @(L.Hand == Hand.Right ? "on" : "")" disabled="@L.IsRunning" @onclick="() => SetHand(Hand.Right)">右手</button>
+                        <button class="seg @(L.Hand == Hand.Left ? "on" : "")" disabled="@L.IsRunning" @onclick="() => SetHand(Hand.Left)">左手</button>
+                    </div>
+                </div>
+                <label class="field">
+                    <span class="field-label">メモ（任意）</span>
+                    <input class="text" value="@L.Note" @onchange="e => L.Note = e.Value?.ToString() ?? string.Empty" placeholder="例: 服薬 1 時間後" disabled="@L.IsRunning" maxlength="80" />
+                </label>
+                <p class="small muted"><Icon Name="lock" Small="true" /> 記録はこの端末のブラウザーの中だけに保存し、どこにも送りません。</p>
+            </section>
+
+            <section class="card">
+                <h2 class="card-title">センサー</h2>
+                <div class="segments full">
+                    <button class="seg @(L.Sensor == SensorKind.Phone ? "on" : "")" disabled="@(L.IsRunning || !L.PhoneSupported)" @onclick="L.UsePhoneAsync"><Icon Name="phone" Small="true" />このスマホ</button>
+                    <button class="seg @(L.Sensor == SensorKind.Simulated ? "on" : "")" disabled="@L.IsRunning" @onclick="() => L.UseSimulation(L.Profile)"><Icon Name="wave" Small="true" />見本の信号</button>
+                </div>
+                <p class="sensor-status @(L.SensorLive ? "on" : "")"><span class="dot"></span>@L.SensorStatus</p>
+                @if (L.Sensor == SensorKind.Phone && L.PhoneNeedsPermission && !L.PhoneGranted)
+                {
+                    <button class="btn primary block" id="motion-permission"><Icon Name="phone" />センサーを使う</button>
+                }
+                @if (L.Sensor == SensorKind.Simulated)
+                {
+                    <label class="field">
+                        <span class="field-label">見本の信号の種類</span>
+                        <select class="select" disabled="@L.IsRunning" @onchange="OnProfile">
+                            <option value="0" selected="@(L.Profile == SimulationProfile.RestTremor)">安静時に目立つふるえ（4〜6 Hz）</option>
+                            <option value="1" selected="@(L.Profile == SimulationProfile.PosturalTremor)">姿勢時に目立つふるえ（6〜8 Hz）</option>
+                            <option value="2" selected="@(L.Profile == SimulationProfile.NoTremor)">目立ったふるえなし</option>
+                        </select>
+                    </label>
+                    @if (!L.PhoneSupported)
+                    {
+                        <p class="small muted">スマホやタブレットで開くと、本体の加速度センサーで測れます。</p>
+                    }
+                }
+                @if (L.SensorTooSlow)
+                {
+                    <p class="note warn"><Icon Name="warn" Small="true" />この端末のセンサーは @L.NativeRate Hz で、15 Hz までのふるえを正しく測るには遅すぎます。結果は目安にしてください。</p>
+                }
+            </section>
+        </aside>
+
+        <section class="card measure-main cond-accent @Labels.ConditionKey(L.CurrentCondition)">
+            <div class="instruction">
+                <PoseIllustration Condition="L.CurrentCondition" />
+                <div>
+                    <div class="kicker cond-color">@(L.StepIndex + 1) / 2 · @Labels.Condition(L.CurrentCondition)</div>
+                    <h2 class="instruction-title">@InstructionTitle</h2>
+                    <p class="instruction-body">@InstructionBody</p>
+                    <p class="small muted">@TimingText</p>
+                </div>
+            </div>
+
+            <div class="live">
+                <div class="live-count">
+                    @if (L.IsRunning)
+                    {
+                        <span class="count-num">@L.Countdown</span>
+                        <span class="count-caption">@L.CountdownCaption</span>
+                    }
+                    else if (L.Stage == Stage.Review)
+                    {
+                        <span class="count-num done"><Icon Name="check" /></span>
+                        <span class="count-caption">記録しました</span>
+                    }
+                    else
+                    {
+                        <span class="count-num idle">@L.MeasurementSeconds</span>
+                        <span class="count-caption">秒 測ります</span>
+                    }
+                </div>
+                <div class="live-wave">
+                    <div class="wave-host" id="live-wave"></div>
+                    <div class="progress"><span style="width:@F(L.Progress * 100, "0.#")%"></span></div>
+                </div>
+            </div>
+
+            @if (L.Error is not null)
+            {
+                <p class="note error"><Icon Name="warn" Small="true" />@L.Error</p>
+            }
+
+            @if (L.Stage == Stage.Review && L.Review is not null)
+            {
+                <ConditionCard Condition="L.CurrentCondition" Metrics="L.Review.Metrics" />
+            }
+
+            <div class="actions">
+                @switch (L.Stage)
+                {
+                    case Stage.Prepare:
+                        <button class="btn primary big" @onclick="L.BeginAsync"><Icon Name="play" />@Labels.Condition(L.CurrentCondition)の測定を開始</button>
+                        @if (L.CurrentCondition == Condition.Postural)
+                        {
+                            <button class="btn" @onclick="L.FinishWithRestOnlyAsync">安静時だけで終える</button>
+                            <button class="btn ghost" @onclick="L.ResetFlow"><Icon Name="retry" />安静時から測り直す</button>
+                        }
+                        break;
+                    case Stage.Countdown or Stage.Settling or Stage.Recording:
+                        <button class="btn big" @onclick="L.Abort"><Icon Name="stop" />中止</button>
+                        break;
+                    case Stage.Review:
+                        <button class="btn primary big" @onclick="L.NextAsync"><Icon Name="next" />@(L.CurrentCondition == Condition.Rest ? "姿勢時の測定へ" : "保存して結果を見る")</button>
+                        <button class="btn" @onclick="L.BeginAsync"><Icon Name="retry" />取り直す</button>
+                        break;
+                }
+            </div>
+        </section>
+    </div>
+</div>
+
+@code {
+    private const string WaveId = "live-wave";
+    private bool waveReady;
+
+    private bool Phone => L.Sensor == SensorKind.Phone;
+
+    private string InstructionTitle => L.CurrentCondition == Condition.Rest
+        ? "安静時: 腕の力を抜きます"
+        : "姿勢時: 腕を前に伸ばして保ちます";
+
+    private string InstructionBody => (L.CurrentCondition, Phone) switch
+    {
+        (Condition.Rest, true) => "椅子に座り、手のひらを下にして太ももの上に置きます。スマホを画面を上にして手の甲に乗せ（ゴムバンドなどで軽く留めると安定します）、腕の力を抜きます。話したり、手を動かしたりしないでください。",
+        (Condition.Postural, true) => "座ったまま、スマホを手の甲に乗せた腕を肩の高さで前に伸ばし、手のひらを下に向けて保ちます。腕を支えず、姿勢を保つことに集中します。",
+        (Condition.Rest, false) => "センサーを手の甲に付け、腕を膝または台の上に置いて、力を抜いてもらってください。話したり手を動かしたりしないよう伝えます。",
+        _ => "座ったまま、両腕を肩の高さで前に伸ばし、手のひらを下に向けて保ってもらってください。腕を支えず、姿勢を保つことに集中してもらいます。",
+    };
+
+    private string TimingText => Phone && L.PrepareSeconds > 0
+        ? $"「開始」を押すと {L.PrepareSeconds} 秒後に始まります（対応している端末は振動で知らせます）。はじめの 3 秒は姿勢が落ち着くまで記録せず、そのあと {L.MeasurementSeconds} 秒記録します。"
+        : $"はじめの 3 秒は姿勢が落ち着くまで記録せず、そのあと {L.MeasurementSeconds} 秒記録します。";
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+        L.Display += OnDisplay;
+        L.DisplayReset += OnDisplayReset;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await Io.WaveCreateAsync(WaveId);
+            waveReady = true;
+        }
+        if (waveReady) await Io.WaveColorAsync(WaveId, L.CurrentCondition == Condition.Rest ? "#0E8A8A" : "#C0661A");
+        if (L.Sensor == SensorKind.Phone && L.PhoneNeedsPermission && !L.PhoneGranted) await L.BindPermissionButtonAsync("motion-permission");
+    }
+
+    private void OnDisplay(double[] values)
+    {
+        if (waveReady) _ = Io.WavePushAsync(WaveId, values).AsTask();
+    }
+
+    private void OnDisplayReset()
+    {
+        if (waveReady) _ = Io.WaveResetAsync(WaveId).AsTask();
+    }
+
+    private void SetHand(Hand hand)
+    {
+        L.Hand = hand;
+        L.Notify();
+    }
+
+    private void OnProfile(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out int p)) L.UseSimulation((SimulationProfile)p);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        L.Display -= OnDisplay;
+        L.DisplayReset -= OnDisplayReset;
+        Dispose();
+        if (waveReady)
+        {
+            try
+            {
+                await Io.WaveDisposeAsync(WaveId);
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
+    }
+}

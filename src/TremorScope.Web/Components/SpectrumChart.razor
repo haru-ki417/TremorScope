@@ -1,0 +1,77 @@
+@* 周波数の分布（スペクトル）。山の位置がふるえの周波数、高さが強さ。帯は 4〜6 Hz *@
+@{
+    const double X0 = 0, X1 = 16;
+    var series = new List<(string Cls, double[] F, double[] A, double Peak)>();
+    foreach (var (cls, r) in new[] { ("rest", Rest), ("postural", Postural) })
+    {
+        if (r is null) continue;
+        var f = r.Spectrum.Frequencies;
+        var a = r.Spectrum.Density.Select(d => Math.Sqrt(Math.Max(d, 0)) * 1000).ToArray();
+        series.Add((cls, f, a, r.Metrics.PeakFrequencyHz));
+    }
+    double yMax = Nice(Math.Max(1e-6, series.SelectMany(s => s.A.Where((_, i) => s.F[i] >= 1 && s.F[i] <= X1)).DefaultIfEmpty(1).Max() * 1.1));
+    double X(double hz) => (hz - X0) / (X1 - X0) * 1000;
+    double Y(double v) => 300 - Math.Min(v, yMax) / yMax * 290;
+}
+<div class="spectrum">
+    <div class="spec-plot">
+        <svg viewBox="0 0 1000 300" preserveAspectRatio="none" class="chart-svg" aria-label="周波数の分布">
+            <rect class="band-4-6" x="@P(X(4))" y="0" width="@P(X(6) - X(4))" height="300" />
+            @for (int k = 1; k <= 4; k++)
+            {
+                <line class="grid" x1="0" x2="1000" y1="@P(300 - k * 72.5)" y2="@P(300 - k * 72.5)" vector-effect="non-scaling-stroke" />
+            }
+            @for (int hz = 2; hz < 16; hz += 2)
+            {
+                <line class="grid" x1="@P(X(hz))" x2="@P(X(hz))" y1="0" y2="300" vector-effect="non-scaling-stroke" />
+            }
+            @foreach (var s in series)
+            {
+                var sb = new System.Text.StringBuilder();
+                for (int i = 0; i < s.F.Length; i++)
+                {
+                    if (s.F[i] > X1) break;
+                    sb.Append(i == 0 ? "M" : " L").Append(P(X(s.F[i]))).Append(' ').Append(P(Y(s.A[i])));
+                }
+                <path class="trace @s.Cls" d="@sb.ToString()" vector-effect="non-scaling-stroke" />
+            }
+            <line class="axis" x1="0" x2="1000" y1="300" y2="300" vector-effect="non-scaling-stroke" />
+        </svg>
+        @foreach (var s in series)
+        {
+            <span class="peak-label @s.Cls" style="left:@P(Math.Clamp(X(s.Peak) / 10, 2, 88))%">@Labels.F(s.Peak, "0.0") Hz</span>
+        }
+        <span class="y-max">@Labels.Auto(yMax)</span>
+    </div>
+    <div class="spec-axis">@for (int hz = 0; hz <= 16; hz += 2)
+        {
+            <span style="left:@P(X(hz) / 10)%">@hz</span>
+        }</div>
+    <div class="spec-legend">
+        <span><i class="sw band"></i>4〜6 Hz</span>
+        @if (Rest is not null)
+        {
+            <span><i class="sw rest"></i>安静時</span>
+        }
+        @if (Postural is not null)
+        {
+            <span><i class="sw postural"></i>姿勢時</span>
+        }
+        <span class="muted">横: 周波数（Hz）　縦: 強さ（mg/√Hz）</span>
+    </div>
+</div>
+
+@code {
+    [Parameter] public AnalysisResult? Rest { get; set; }
+    [Parameter] public AnalysisResult? Postural { get; set; }
+
+    private static string P(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
+
+    private static double Nice(double v)
+    {
+        double p = Math.Pow(10, Math.Floor(Math.Log10(v)));
+        foreach (var m in new[] { 1, 2, 2.5, 5, 10 })
+            if (v <= m * p) return m * p;
+        return 10 * p;
+    }
+}

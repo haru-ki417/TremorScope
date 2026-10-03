@@ -1,0 +1,67 @@
+@* しくみと設定 *@
+@inherits LabComponent
+
+<div class="page about-page">
+    <header class="page-head">
+        <div>
+            <div class="kicker">ABOUT</div>
+            <h1>しくみと設定</h1>
+        </div>
+    </header>
+
+    <div class="about-grid">
+        <section class="card">
+            <h2 class="card-title">設定</h2>
+            <div class="setting">
+                <div><b>1 回の記録の長さ</b><p class="small muted">安静時・姿勢時それぞれ。10〜60 秒。</p></div>
+                <span class="num-unit"><input type="number" class="num" min="10" max="60" step="5" value="@L.MeasurementSeconds" @onchange="e => Save(e, 0)" />秒</span>
+            </div>
+            <div class="setting">
+                <div><b>始まるまでの秒数</b><p class="small muted">スマホを手に乗せて姿勢をとる時間。0〜15 秒。</p></div>
+                <span class="num-unit"><input type="number" class="num" min="0" max="15" step="1" value="@L.PrepareSeconds" @onchange="e => Save(e, 1)" />秒</span>
+            </div>
+            <div class="setting">
+                <div><b>「目立ったふるえ」の基準</b><p class="small muted">これから測る記録の比較に使います（RMS）。</p></div>
+                <span class="num-unit"><input type="number" class="num" min="1" max="200" step="1" value="@Labels.F(L.ThresholdMg, "0.#")" @onchange="e => Save(e, 2)" />mg</span>
+            </div>
+        </section>
+
+        <section class="card">
+            <h2 class="card-title">記録の扱い</h2>
+            <ul class="plain">
+                <li><Icon Name="lock" Small="true" />センサーの値・名前・結果は、<b>この端末のブラウザーの中だけ</b>に保存します。どこにも送りません。</li>
+                <li><Icon Name="lock" Small="true" />ブラウザーの「サイトのデータを消す」や、履歴の「すべての記録を消す」で消えます。ほかの端末とは共有されません。</li>
+                <li><Icon Name="warn" Small="true" />@Labels.Disclaimer</li>
+            </ul>
+        </section>
+
+        <section class="card wide">
+            <h2 class="card-title">解析のしくみ</h2>
+            <ol class="flow">
+                <li><b>50 Hz にそろえる</b>: スマホのセンサーの値（多くは 60 Hz 前後で、間隔が少し揺れる）を、時刻で直線補間して 20 ms ごとの値にします。0.2 秒より長く途切れた分は「届かなかった点」として数え、品質の確認に使います。</li>
+                <li><b>重力と姿勢の変化を除く</b>: 3 軸それぞれから、1 Hz の高域通過フィルター（位相のずれない前後 2 回のフィルター）で重力とゆっくりした動きを除きます。</li>
+                <li><b>周波数分析</b>: Welch 法（約 5 秒・ハン窓・50% 重ね）でスペクトルを求め、3 軸を足し合わせます（スマホの向きによらない）。</li>
+                <li><b>数値にする</b>: 2〜15 Hz で最も強い周波数（放物線で補間）、帯域の強さから RMS（mg）、a / (2πf)² で推定変位（mm）、ピーク ±1 Hz への集中度から規則性を求めます。</li>
+                <li><b>品質を確かめる</b>: センサーが動いていない・途切れ・時間不足・振り切れ・腕の大きな動きを見つけて知らせます（失敗した測定を「ふるえなし」と記録しないため）。</li>
+            </ol>
+            <p class="small muted">計算は Windows 版と同じ C# の部品（TremorScope.Core）を、WebAssembly にしてブラウザーの中で動かしています。</p>
+            <div class="row-actions">
+                <a class="btn" href="https://github.com/haru-ki417/TremorScope" target="_blank" rel="noopener"><Icon Name="github" />GitHub</a>
+                <a class="btn" href="https://github.com/haru-ki417/TremorScope#使ってみる" target="_blank" rel="noopener"><Icon Name="windows" />Windows 版（センサー・PACS 連携）</a>
+            </div>
+        </section>
+    </div>
+</div>
+
+@code {
+    private Task Save(ChangeEventArgs e, int which)
+    {
+        if (!double.TryParse(e.Value?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out double v)) return Task.CompletedTask;
+        return which switch
+        {
+            0 => L.SetSettingsAsync((int)v, L.ThresholdMg, L.PrepareSeconds),
+            1 => L.SetSettingsAsync(L.MeasurementSeconds, L.ThresholdMg, (int)v),
+            _ => L.SetSettingsAsync(L.MeasurementSeconds, v, L.PrepareSeconds),
+        };
+    }
+}

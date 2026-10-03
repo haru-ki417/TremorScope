@@ -1,0 +1,58 @@
+@* 1 つの条件（安静時・姿勢時）の結果。数値・品質・周波数帯ごとの割合 *@
+<article class="card cond @Labels.ConditionKey(Condition)">
+    <header class="cond-head">
+        <div>
+            <h3 class="cond-title">@Labels.Condition(Condition)</h3>
+            <p class="cond-pose">@Labels.ConditionPose(Condition)</p>
+        </div>
+        @if (Metrics is not null)
+        {
+            <span class="badge @Labels.QualityKey(Metrics.Quality.Level)"><span class="dot"></span>@Labels.Quality(Metrics.Quality.Level)</span>
+        }
+    </header>
+    @if (Metrics is null)
+    {
+        <p class="muted">この条件は測定していません。</p>
+    }
+    else
+    {
+        <div class="metrics">
+            <div class="metric"><span class="m-label">ピーク周波数</span><span class="m-value">@Labels.F(Metrics.PeakFrequencyHz, "0.0")<small>Hz</small></span></div>
+            <div class="metric"><span class="m-label">ふるえの大きさ（RMS）</span><span class="m-value">@Labels.Auto(Metrics.RmsAccelerationMg)<small>mg</small></span></div>
+            <div class="metric"><span class="m-label">推定変位（RMS・目安）</span><span class="m-value">@Labels.Auto(Metrics.EstimatedDisplacementMm)<small>mm</small></span></div>
+            <div class="metric"><span class="m-label">規則性</span><span class="m-value">@Labels.F(Metrics.Regularity * 100, "0")<small>%</small></span></div>
+        </div>
+        @if (Metrics.Quality.Messages.Count > 0)
+        {
+            <ul class="quality-list">
+                @foreach (var m in Metrics.Quality.Messages)
+                {
+                    <li><Icon Name="warn" Small="true" /><span>@m</span></li>
+                }
+            </ul>
+        }
+        <div class="bands-title">周波数帯ごとの割合</div>
+        <div class="bands">
+            @foreach (var b in Metrics.Bands)
+            {
+                double max = Metrics.Bands.Max(x => x.Share);
+                bool top = b.Share > 0 && Math.Abs(b.Share - max) < 1e-12;
+                <div class="band">
+                    <span class="band-pct">@Labels.F(b.Share * 100, "0")%</span>
+                    <span class="band-track"><span class="band-fill @(top ? "top" : "")" style="height:@Labels.F(Math.Max(b.Share * 100, 0), "0.#")%"></span></span>
+                    <span class="band-label">@b.Label</span>
+                </div>
+            }
+        </div>
+        @if (ChildContent is not null)
+        {
+            <div class="cond-foot">@ChildContent</div>
+        }
+    }
+</article>
+
+@code {
+    [Parameter, EditorRequired] public Condition Condition { get; set; }
+    [Parameter] public TremorMetrics? Metrics { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

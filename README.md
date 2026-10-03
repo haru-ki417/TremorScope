@@ -6,6 +6,8 @@
 > **診断はしません。** 結果は「ふるえの物理的な特徴」であり、病気の有無や種類を判断するものではありません。
 > 本ソフトは医療機器として承認・認証を受けていません。
 
+**▶ ブラウザーで開く: https://haru-ki417.github.io/TremorScope/** 　スマホ・タブレットなら、本体の加速度センサーでそのまま測れます（インストール不要。記録はその端末の中だけに保存し、どこにも送りません）。
+
 ![結果の画面](docs/screenshots/04-result.png)
 
 ## なぜ作ったか
@@ -68,6 +70,7 @@ flowchart LR
 | `src/TremorScope.Core` | 信号処理・解析・品質確認・比較・仮名化・CSV / DICOM（画面にも Azure にも依存しない） |
 | `src/TremorScope.Infrastructure` | IoT Hub 受信・SQLite（EF Core）・Cosmos DB・PACS・暗号化した設定 |
 | `src/TremorScope.App` | WPF の画面（MVVM）・レポートの描画 |
+| `src/TremorScope.Web` | ブラウザー版（Blazor WebAssembly）。スマホの加速度センサーで測り、記録はその端末だけに保存。GitHub Pages で公開 |
 | `tests/TremorScope.Tests` | 58 件のテスト（正解の分かる信号で解析を検証・保存と個人情報の確認 など） |
 | `firmware/TremorSensor` | ESP32 のファームウェア（参考実装） |
 
@@ -80,7 +83,28 @@ flowchart LR
 
 テストでは、周波数・振幅が分かっている正弦波で、ピーク周波数（±0.08 Hz）・RMS・変位・パーセバルの定理・向きによらないことを確かめています。
 
+## ブラウザー版（スマホ・タブレット・パソコン）
+
+https://haru-ki417.github.io/TremorScope/ を開くだけで使えます。専用のセンサーの代わりに **スマホ・タブレット本体の加速度センサー** で測ります。解析は Windows 版と同じ計算の部品（`TremorScope.Core`）を WebAssembly にして、ブラウザーの中で動かしています。
+
+<table>
+<tr>
+<td width="74%"><img src="docs/screenshots/08-web-measure.png" alt="ブラウザー版の測定（パソコン・見本の信号）"></td>
+<td><img src="docs/screenshots/09-web-phone.png" alt="ブラウザー版の結果（スマホ）"></td>
+</tr>
+<tr><td align="center">測定（パソコンでは見本の信号で試せる）</td><td align="center">結果（スマホ）</td></tr>
+</table>
+
+- **測り方**: スマホを手の甲に乗せ、安静時 → 姿勢時を画面の案内どおりに測る。「開始」から数秒の準備時間があり、始まり・終わりを振動で知らせる（対応端末）。測定中は画面が消えないようにする
+- **50 Hz にそろえる**: ブラウザーのセンサーの値（多くは 60 Hz 前後で、間隔が少し揺れる）を時刻で直線補間し、解析の前提の等間隔（50 Hz）にする。0.2 秒より長い途切れ（画面が消えた・別のアプリに切りかえた）は「届かなかった点」として数え、Windows 版と同じ品質の確認で知らせる
+- **記録の扱い**: 名前・メモ・波形・結果は、その端末のブラウザーの中（localStorage）だけに保存し、どこにも送らない。CSV（結果・波形）での書き出しと、印刷（PDF 保存）でのレポートができる
+- **センサーがない端末**: パソコンでは Windows 版と同じ見本の信号（安静時に目立つふるえ・姿勢時に目立つふるえ・なし）で操作を試せる
+- iPhone・iPad では、はじめに「センサーを使う」を押して、モーションセンサーの使用を許可する
+- 専用センサー（ESP32）・クラウド保存・PACS 連携は、病院での運用を想定した Windows 版の機能
+
 ## 使ってみる
+
+- **ブラウザー版**: https://haru-ki417.github.io/TremorScope/
 
 - **配布版**: [Releases](../../releases) の zip を展開して `TremorScope.exe` を起動（.NET のインストール不要）。
 - **センサーなしで試す**: 初期設定は模擬センサーです。患者「DEMO-001」を登録して「測定を始める」を押してください。
@@ -93,13 +117,14 @@ flowchart LR
 dotnet build TremorScope.slnx
 dotnet test --solution TremorScope.slnx
 dotnet run --project src/TremorScope.App
+dotnet run --project src/TremorScope.Web      # ブラウザー版（開発用のサーバー）。公開版の作成には `dotnet workload install wasm-tools` が必要
 
 # 見本のデータで全画面を画像に保存（docs/screenshots の作り方）
 TremorScope.exe --snapshots docs/screenshots
 ```
 
 - 警告はすべてエラー扱い（`TreatWarningsAsErrors`・.NET のコード解析 `latest-recommended`）
-- GitHub Actions: プッシュごとに Windows でビルド・テスト・マイグレーションの確認。リリースを公開すると配布用 zip を自動で添付
+- GitHub Actions: プッシュごとに Windows でビルド・テスト・マイグレーションの確認、Linux でブラウザー版のビルド。main へのプッシュでブラウザー版を GitHub Pages に公開。リリースを公開すると配布用 zip を自動で添付
 
 ## 制限と今後
 

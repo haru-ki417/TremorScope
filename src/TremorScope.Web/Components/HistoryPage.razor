@@ -1,0 +1,153 @@
+@* 履歴と経過: この端末に保存した記録の一覧と推移 *@
+@inherits LabComponent
+
+<div class="page history-page">
+    <header class="page-head">
+        <div>
+            <div class="kicker">HISTORY</div>
+            <h1>履歴と経過</h1>
+        </div>
+        <div class="head-actions">
+            <button class="btn" disabled="@(Shown.Count == 0)" @onclick='() => L.ExportSessionsCsvAsync(Shown, "tremorscope_sessions.csv")'><Icon Name="download" />CSV で書き出す</button>
+            <div class="menu-host">
+                <button class="btn" @onclick="() => demoMenu = !demoMenu"><Icon Name="plus" />見本を追加</button>
+                @if (demoMenu)
+                {
+                    <div class="menu-backdrop" @onclick="() => demoMenu = false"></div>
+                    <div class="menu right">
+                        <button class="menu-item" @onclick="() => AddDemo(SimulationProfile.RestTremor)">安静時に目立つふるえ</button>
+                        <button class="menu-item" @onclick="() => AddDemo(SimulationProfile.PosturalTremor)">姿勢時に目立つふるえ</button>
+                        <button class="menu-item" @onclick="() => AddDemo(SimulationProfile.NoTremor)">目立ったふるえなし</button>
+                    </div>
+                }
+            </div>
+        </div>
+    </header>
+
+    @if (L.StorageWarning is not null)
+    {
+        <p class="note warn"><Icon Name="warn" Small="true" />@L.StorageWarning</p>
+    }
+
+    @if (L.Sessions.Count == 0)
+    {
+        <section class="card empty-card">
+            <Icon Name="history" />
+            <h2>まだ記録がありません</h2>
+            <p class="muted">測定すると、ここに一覧と推移のグラフが出ます。記録はこの端末のブラウザーの中だけに保存します。</p>
+            <div class="row-actions center">
+                <button class="btn primary" @onclick="() => L.GoAsync(Page.Measure)"><Icon Name="measure" />測定する</button>
+                <button class="btn" @onclick="() => AddDemo(SimulationProfile.RestTremor)">見本の結果を見る</button>
+            </div>
+        </section>
+    }
+    else
+    {
+        <div class="filter-row">
+            <label class="field inline">
+                <span class="field-label">名前・ID</span>
+                <select class="select" @onchange="e => filter = e.Value?.ToString() ?? AllKey">
+                    <option value="@AllKey" selected="@(filter == AllKey)">すべて（@L.Sessions.Count 件）</option>
+                    @foreach (var g in L.Sessions.GroupBy(x => x.DisplayLabel))
+                    {
+                        <option value="@g.Key" selected="@(filter == g.Key)">@g.Key（@g.Count() 件）</option>
+                    }
+                </select>
+            </label>
+            <div class="segments">
+                <button class="seg @(hand is null ? "on" : "")" @onclick="() => hand = null">両手</button>
+                <button class="seg @(hand == Hand.Right ? "on" : "")" @onclick="() => hand = Hand.Right">右手</button>
+                <button class="seg @(hand == Hand.Left ? "on" : "")" @onclick="() => hand = Hand.Left">左手</button>
+            </div>
+        </div>
+
+        @if (Shown.Count > 0)
+        {
+            <div class="trend-grid">
+                <section class="card">
+                    <h2 class="card-title">ふるえの大きさ（RMS, mg）</h2>
+                    <TrendChart Sessions="Shown" Value="m => m?.RmsAccelerationMg" Unit="mg" Title="ふるえの大きさの推移" Threshold="L.ThresholdMg" />
+                    <div class="spec-legend"><span><i class="sw rest"></i>安静時</span><span><i class="sw postural"></i>姿勢時</span><span><i class="sw dash"></i>基準</span></div>
+                </section>
+                <section class="card">
+                    <h2 class="card-title">ピーク周波数（Hz）</h2>
+                    <TrendChart Sessions="Shown" Value="m => m?.PeakFrequencyHz" Unit="Hz" Title="ピーク周波数の推移" />
+                    <div class="spec-legend"><span><i class="sw rest"></i>安静時</span><span><i class="sw postural"></i>姿勢時</span></div>
+                </section>
+            </div>
+        }
+
+        <section class="card table-card">
+            <div class="table-wrap">
+                <table class="grid">
+                    <thead>
+                        <tr>
+                            <th class="left">日時</th><th class="left">名前・ID</th><th class="left">手</th><th class="left">結果</th>
+                            <th class="rest">安静時 mg</th><th class="rest">Hz</th><th class="postural">姿勢時 mg</th><th class="postural">Hz</th><th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var s in Shown)
+                        {
+                            var session = s;
+                            var r = s.RestResult?.Metrics;
+                            var p = s.PosturalResult?.Metrics;
+                            <tr @onclick="() => L.OpenAsync(session)" tabindex="0" @onkeydown='e => { if (e.Key == "Enter") _ = L.OpenAsync(session); }'>
+                                <td class="left nowrap">@Labels.LocalTime(s.MeasuredAtUtc)</td>
+                                <td class="left">@s.DisplayLabel@if (!string.IsNullOrWhiteSpace(s.Note))
+                                    {
+                                        <small class="muted"> · @s.Note</small>
+                                    }</td>
+                                <td class="left nowrap">@Labels.Hand(s.Hand)</td>
+                                <td class="left">@Labels.Pattern(s.Comparison.Pattern)</td>
+                                <td>@(r is null ? "—" : Labels.Auto(r.RmsAccelerationMg))</td>
+                                <td>@(r is null ? "—" : Labels.F(r.PeakFrequencyHz, "0.0"))</td>
+                                <td>@(p is null ? "—" : Labels.Auto(p.RmsAccelerationMg))</td>
+                                <td>@(p is null ? "—" : Labels.F(p.PeakFrequencyHz, "0.0"))</td>
+                                <td class="chev">›</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        <div class="row-actions">
+            <button class="btn ghost danger" @onclick="() => confirmAll = true"><Icon Name="trash" />すべての記録を消す</button>
+        </div>
+    }
+</div>
+
+@if (confirmAll)
+{
+    <Modal Title="すべての記録を消しますか" OnClose="() => confirmAll = false">
+        <p>この端末に保存した @L.Sessions.Count 件の記録をすべて消します。元に戻せません。必要なら先に CSV で書き出してください。</p>
+        <div class="modal-foot">
+            <button class="btn" @onclick="() => confirmAll = false">やめる</button>
+            <button class="btn primary danger" @onclick="DeleteAll">すべて消す</button>
+        </div>
+    </Modal>
+}
+
+@code {
+    private const string AllKey = "\u0001all";
+    private string filter = AllKey;
+    private Hand? hand;
+    private bool demoMenu, confirmAll;
+
+    private List<Session> Shown => L.Sessions
+        .Where(s => filter == AllKey || s.DisplayLabel == filter)
+        .Where(s => hand is null || s.Hand == hand)
+        .ToList();
+
+    private async Task AddDemo(SimulationProfile p)
+    {
+        demoMenu = false;
+        await L.AddDemoAsync(p);
+    }
+
+    private async Task DeleteAll()
+    {
+        confirmAll = false;
+        await L.DeleteAllAsync();
+    }
+}

@@ -1,0 +1,74 @@
+@* 経過のグラフ（古い順）。安静時と姿勢時の値を線で結ぶ *@
+@if (Sessions.Count > 0)
+{
+    var pts = Sessions.OrderBy(s => s.MeasuredAtUtc).ToList();
+    var restVals = pts.Select(s => Value(s.RestResult?.Metrics)).ToList();
+    var postVals = pts.Select(s => Value(s.PosturalResult?.Metrics)).ToList();
+    double max = Nice(Math.Max(1e-6, restVals.Concat(postVals).Where(v => v is not null).Select(v => v!.Value).DefaultIfEmpty(1).Max() * 1.15));
+    double X(int i) => pts.Count == 1 ? 500 : 30 + i * 940.0 / (pts.Count - 1);
+    double Y(double v) => 200 - v / max * 185;
+    <div class="trend">
+        <div class="trend-plot">
+            <svg viewBox="0 0 1000 200" preserveAspectRatio="none" class="chart-svg" aria-label="@Title">
+                @for (int k = 1; k <= 4; k++)
+                {
+                    <line class="grid" x1="0" x2="1000" y1="@P(200 - k * 46.25)" y2="@P(200 - k * 46.25)" vector-effect="non-scaling-stroke" />
+                }
+                @if (Threshold is double th && th < max)
+                {
+                    <line class="threshold" x1="0" x2="1000" y1="@P(Y(th))" y2="@P(Y(th))" vector-effect="non-scaling-stroke" />
+                }
+                @foreach (var (cls, vals) in new[] { ("rest", restVals), ("postural", postVals) })
+                {
+                    var d = new System.Text.StringBuilder();
+                    bool pen = false;
+                    for (int i = 0; i < vals.Count; i++)
+                    {
+                        if (vals[i] is not double v) { pen = false; continue; }
+                        d.Append(pen ? " L" : " M").Append(P(X(i))).Append(' ').Append(P(Y(v)));
+                        pen = true;
+                    }
+                    <path class="trace @cls" d="@d.ToString()" vector-effect="non-scaling-stroke" />
+                }
+                <line class="axis" x1="0" x2="1000" y1="200" y2="200" vector-effect="non-scaling-stroke" />
+            </svg>
+            @foreach (var (cls, vals) in new[] { ("rest", restVals), ("postural", postVals) })
+            {
+                for (int i = 0; i < vals.Count; i++)
+                {
+                    if (vals[i] is double v)
+                    {
+                        <span class="pt @cls" style="left:@P(X(i) / 10)%;top:@P(Y(v) / 2)%" title="@Labels.LocalTime(pts[i].MeasuredAtUtc)  @Labels.Auto(v) @Unit"></span>
+                    }
+                }
+            }
+            <span class="y-max">@Labels.Auto(max) @Unit</span>
+            @if (Threshold is double t2 && t2 < max)
+            {
+                <span class="th-label" style="top:@P(Y(t2) / 2)%">基準 @Labels.Auto(t2) @Unit</span>
+            }
+        </div>
+        <div class="trend-axis"><span>@Labels.LocalTime(pts[0].MeasuredAtUtc)</span>@if (pts.Count > 1)
+            {
+                <span>@Labels.LocalTime(pts[^1].MeasuredAtUtc)</span>
+            }</div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public IReadOnlyList<Session> Sessions { get; set; } = [];
+    [Parameter, EditorRequired] public Func<TremorMetrics?, double?> Value { get; set; } = _ => null;
+    [Parameter] public string Unit { get; set; } = "";
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public double? Threshold { get; set; }
+
+    private static string P(double v) => v.ToString("0.##", CultureInfo.InvariantCulture);
+
+    private static double Nice(double v)
+    {
+        double p = Math.Pow(10, Math.Floor(Math.Log10(v)));
+        foreach (var m in new[] { 1, 2, 2.5, 5, 10 })
+            if (v <= m * p) return m * p;
+        return 10 * p;
+    }
+}

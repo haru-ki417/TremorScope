@@ -20,17 +20,33 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Restore
-        run: dotnet restore TremorScope.slnx
-
       - name: Build
-        run: dotnet build TremorScope.slnx --configuration Release --no-restore
+        run: |
+          dotnet build src/TremorScope.App --configuration Release
+          dotnet build tests/TremorScope.Tests --configuration Release
 
       - name: Test
-        run: dotnet test --solution TremorScope.slnx --configuration Release --no-build
+        run: dotnet test --project tests/TremorScope.Tests --configuration Release --no-build
 
       # データの形（エンティティ）を変えたのに、データベースの変更手順（マイグレーション）を作り忘れていないか
       - name: Check migrations are up to date
         run: |
           dotnet tool restore
           dotnet ef migrations has-pending-model-changes -p src/TremorScope.Infrastructure -s src/TremorScope.Infrastructure --configuration Release --no-build
+
+  web:
+    # ブラウザー版（Blazor WebAssembly）がビルドできるかを確かめる
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+
+      - name: Install WebAssembly tools
+        run: dotnet workload install wasm-tools
+
+      - name: Build
+        run: dotnet build src/TremorScope.Web --configuration Release

@@ -1,0 +1,49 @@
+@* TremorScope Web の画面全体
+   広い画面: 左の帯（移動・センサーの状態）| 右に各画面
+   狭い画面: 上に名前、下に移動の帯 *@
+@inherits LabComponent
+
+<div class="shell">
+    <nav class="rail" aria-label="画面の切りかえ">
+        <div class="brand">
+            <img class="logo" src="icons/icon.svg" alt="" />
+            <div class="brand-text">
+                <span class="brand-name">TremorScope</span>
+                <span class="brand-sub">ふるえを測る <span class="brand-web">WEB</span></span>
+            </div>
+        </div>
+        <div class="nav">
+            @foreach (var (page, label, icon) in Pages)
+            {
+                var p = page;
+                <button class="nav-item @(L.Page == p ? "on" : "")" disabled="@(p == Page.Result && L.Current is null)" @onclick="() => L.GoAsync(p)" aria-current="@(L.Page == p ? "page" : null)">
+                    <Icon Name="@icon" /><span>@label</span>
+                </button>
+            }
+        </div>
+        <div class="rail-foot">
+            <div class="rail-label">センサー</div>
+            <div class="rail-sensor @(L.SensorLive ? "on" : "")"><span class="dot"></span>@(L.Sensor == SensorKind.Phone ? "このスマホ" : "見本の信号")</div>
+            <div class="rail-note">記録はこの端末だけに保存 · 医療機器ではありません</div>
+        </div>
+    </nav>
+    <main class="main">
+        @switch (L.Page)
+        {
+            case Page.Result: <ResultPage />; break;
+            case Page.History: <HistoryPage />; break;
+            case Page.About: <AboutPage />; break;
+            default: <MeasurePage />; break;
+        }
+    </main>
+</div>
+
+@code {
+    private static readonly (Page Page, string Label, string Icon)[] Pages =
+        [(Page.Measure, "測定", "measure"), (Page.Result, "結果", "result"), (Page.History, "履歴と経過", "history"), (Page.About, "しくみと設定", "about")];
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender) await L.StartAsync();
+    }
+}

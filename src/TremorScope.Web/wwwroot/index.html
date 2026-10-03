@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>TremorScope — ふるえを測る</title>
+    <meta name="description" content="スマホの加速度センサーで、安静時と姿勢時のふるえを 20 秒ずつ記録し、周波数・大きさ・規則性を数値にして比べるアプリ。記録はこの端末の中だけに保存します。" />
+    <meta name="theme-color" content="#111925" />
+    <base href="/TremorScope/" />
+    <link rel="icon" type="image/svg+xml" href="icons/icon.svg" />
+    <link rel="apple-touch-icon" href="icons/icon-192.png" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="stylesheet" href="css/app.css" />
+    <script type="importmap"></script>
+</head>
+<body>
+    <div id="app">
+        <div class="boot">
+            <img class="boot-logo" src="icons/icon.svg" alt="" />
+            <div class="boot-name">TremorScope</div>
+            <div class="boot-bar"><span></span></div>
+            <div class="boot-text">読み込んでいます… <span class="boot-pct"></span></div>
+            <noscript><p>このアプリを使うには JavaScript を有効にしてください。</p></noscript>
+        </div>
+    </div>
+    <div id="blazor-error-ui" role="alert">
+        問題が起きました。<a href="" class="reload">読み込み直す</a>
+        <a class="dismiss" aria-label="閉じる">✕</a>
+    </div>
+    <script src="_framework/blazor.webassembly#[.{fingerprint}].js" autostart="false"></script>
+    <script src="js/boot.js"></script>
+</body>
+</html>

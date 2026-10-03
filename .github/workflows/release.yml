@@ -21,7 +21,7 @@ jobs:
           global-json-file: global.json
 
       - name: Test
-        run: dotnet test --solution TremorScope.slnx --configuration Release
+        run: dotnet test --project tests/TremorScope.Tests --configuration Release
 
       - name: Publish (self-contained, win-x64)
         shell: pwsh
